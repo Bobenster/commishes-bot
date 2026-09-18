@@ -97,6 +97,10 @@ export class Scheduler extends EventEmitter {
         this.jobsProcessed++;
         if (result.success) {
           this.jobsSucceeded++;
+          const next = this.queueManager.createNextOccurrence(job.id);
+          if (next) {
+            logger.info(`Recurring job scheduled: ${next.id} at ${next.scheduledAt}`);
+          }
         } else {
           this.jobsFailed++;
         }
