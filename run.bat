@@ -2,15 +2,13 @@
 chcp 65001 >nul
 title Commishes Control Center
 
-set "APP_DIR=%~dp0out\commishes-control-center-win32-x64"
-set "EXE=%APP_DIR%\commishes-control-center.exe"
-
-if not exist "%EXE%" (
-    echo Error: Executable not found at %EXE%
-    echo Please run "npm run build" first.
-    pause
-    exit /b 1
-)
+set "SCRIPT_DIR=%~dp0"
 
 echo Starting Commishes Control Center...
-start "" "%EXE%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SCRIPT_DIR%run.ps1"
+
+if errorlevel 1 (
+    echo.
+    echo Failed to start Commishes Control Center.
+    pause
+)
