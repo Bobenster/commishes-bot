@@ -4,7 +4,18 @@ import { HistoryManager } from '../data/history-manager.js';
 import { SettingsManager } from '../data/settings-manager.js';
 import { ChromeManager, BotChromeSession } from './chrome-manager.js';
 import { CommishesEngine } from './commisshes-engine.js';
-import { QueueItem, RunResult, JobProgress, AuctionParams, logger, createJobLogger } from './index.js';
+import { QueueItem, RunResult, JobProgress, logger, createJobLogger } from './index.js';
+
+class RunExecutionError extends Error {
+  constructor(
+    message: string,
+    readonly stages: any[],
+    readonly publishAttempted: boolean
+  ) {
+    super(message);
+    this.name = 'RunExecutionError';
+  }
+}
 
 export class Runner extends EventEmitter {
   private queueManager: QueueManager;
@@ -113,16 +124,31 @@ export class Runner extends EventEmitter {
           publishAttempted: result.publishAttempted
         };
       } else {
-        throw new Error(result.error || 'Unknown error');
+        throw new RunExecutionError(
+          result.error || 'Unknown error',
+          result.stages,
+          result.publishAttempted === true
+        );
       }
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
+      const failedStages = error instanceof RunExecutionError ? error.stages : [];
+      const publishAttempted = error instanceof RunExecutionError && error.publishAttempted;
       logger.error(`Job ${jobId} failed:`, errorMsg);
 
       emitProgress('failed', 100, `Failed: ${errorMsg}`);
 
-      this.queueManager.markFailed(jobId, errorMsg);
+      if (publishAttempted) {
+        const safeError = `${errorMsg} Automatic retry disabled because the publish button was already clicked; check Commishes before retrying.`;
+        this.queueManager.update(jobId, {
+          status: 'failed',
+          retryCount: job.maxRetries,
+          lastError: safeError
+        });
+      } else {
+        this.queueManager.markFailed(jobId, errorMsg);
+      }
 
       this.historyManager.append({
         queueItemId: jobId,
@@ -133,10 +159,12 @@ export class Runner extends EventEmitter {
         startedAt: job.lastRunAt || new Date().toISOString(),
         finishedAt: new Date().toISOString(),
         success: false,
-        error: errorMsg,
-        stages: [],
+        error: publishAttempted
+          ? `${errorMsg} Automatic retry disabled because the publish button was already clicked; check Commishes before retrying.`
+          : errorMsg,
+        stages: failedStages,
         isDryRun: isTestMode,
-        publishAttempted: false
+        publishAttempted
       });
 
       jobLog.writeResult(false, errorMsg);
@@ -144,8 +172,9 @@ export class Runner extends EventEmitter {
       return {
         success: false,
         error: errorMsg,
-        stages: [],
-        isDryRun: isTestMode
+        stages: failedStages,
+        isDryRun: isTestMode,
+        publishAttempted
       };
 
     } finally {

@@ -89,15 +89,17 @@ export class CommishesEngine {
 
         addStage('publish_start', true, 0, { auctionUrl: readyUrl });
         publishAttempted = true;
-        await startButton.click();
 
-        await page.waitForURL(
+        const publishNavigation = page.waitForURL(
           url => {
             const nextUrl = url.toString();
             return nextUrl !== readyUrl && !nextUrl.includes('/auction/ready/');
           },
           { timeout: 30000, waitUntil: 'domcontentloaded' }
         );
+
+        await startButton.click();
+        await publishNavigation;
 
         addStage('published', true, Date.now() - publishStart, {
           auctionUrl: page.url()
