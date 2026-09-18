@@ -17,6 +17,7 @@ if (-not $mutexAcquired) { exit 0 }
 $watchdogPid = $PID
 $currentMainPid = $ParentPid
 $restartCount = 0
+$lastRestartAt = [DateTime]::MinValue
 $startedAt = (Get-Date).ToUniversalTime().ToString('o')
 $cleanExit = $false
 
@@ -69,7 +70,17 @@ function Get-MainProcess {
 }
 
 function Start-MainAfterCrash([string]$Reason, $State) {
+  $now = (Get-Date).ToUniversalTime()
+  if (($now - $lastRestartAt).TotalSeconds -lt 10) {
+    Write-WatchdogLog 'main-restart-suppressed' @{
+      reason = $Reason
+      cooldownSeconds = [math]::Round(10 - ($now - $lastRestartAt).TotalSeconds, 1)
+    }
+    return
+  }
+
   $restartCount++
+  $lastRestartAt = $now
   Write-WatchdogLog 'main-restart-requested' @{
     reason = $Reason
     previousMainPid = $currentMainPid
@@ -82,6 +93,24 @@ function Start-MainAfterCrash([string]$Reason, $State) {
   }
 
   try {
+    $existing = Get-MainProcess
+    if ($existing) {
+      try {
+        Stop-Process -Id $currentMainPid -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Milliseconds 500
+        Write-WatchdogLog 'stale-main-terminated' @{
+          previousMainPid = $currentMainPid
+          reason = $Reason
+        }
+      } catch {
+        Write-WatchdogLog 'stale-main-terminate-failed' @{
+          previousMainPid = $currentMainPid
+          reason = $Reason
+          error = $_.Exception.Message
+        }
+      }
+    }
+
     $newProcess = Start-Process -FilePath $ExePath -PassThru
     $currentMainPid = $newProcess.Id
     Write-WatchdogLog 'main-restarted' @{ newMainPid = $currentMainPid; reason = $Reason }
