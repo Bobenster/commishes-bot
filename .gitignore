@@ -7,10 +7,10 @@ out/
 build/
 
 # Runtime data
-data/
-images/
-logs/
-chrome-profile/
+/data/
+/images/
+/logs/
+/chrome-profile/
 
 # Environment
 .env
