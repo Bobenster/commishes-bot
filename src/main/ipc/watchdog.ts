@@ -16,6 +16,11 @@ export function setupWatchdogIpc(deps: WatchdogIpcDeps): void {
     return watchdog.checkNow();
   });
 
+  ipcMain.handle('watchdog:rendererError', (_, message: string) => {
+    watchdog.reportRendererError(message);
+    return { success: true };
+  });
+
   ipcMain.handle('watchdog:restartService', async (_, id: string) => {
     await watchdog.restartService(id);
     return watchdog.getStatus();
