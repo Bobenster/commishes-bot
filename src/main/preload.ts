@@ -145,6 +145,14 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
 
+  // Watchdog
+  watchdog: {
+    getStatus: () => ipcRenderer.invoke('watchdog:getStatus'),
+    checkNow: () => ipcRenderer.invoke('watchdog:checkNow'),
+    restartService: (id: string) => ipcRenderer.invoke('watchdog:restartService', id),
+    reportRendererError: (message: string) => ipcRenderer.invoke('watchdog:rendererError', message)
+  },
+
   // App
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
