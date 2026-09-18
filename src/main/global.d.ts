@@ -56,6 +56,12 @@ interface ElectronAPI {
     isRunning: () => Promise<boolean>;
     onProgress: (callback: (progress: JobProgress) => void) => () => void;
   };
+  watchdog: {
+    getStatus: () => Promise<import('../../main/engine/watchdog.js').WatchdogStatus>;
+    checkNow: () => Promise<import('../../main/engine/watchdog.js').WatchdogStatus>;
+    restartService: (id: string) => Promise<import('../../main/engine/watchdog.js').WatchdogStatus>;
+    reportRendererError: (message: string) => Promise<{ success: boolean }>;
+  };
   app: {
     getVersion: () => Promise<string>;
     showWindow: () => Promise<void>;
