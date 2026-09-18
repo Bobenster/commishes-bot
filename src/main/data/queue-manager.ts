@@ -244,7 +244,8 @@ export class QueueManager extends EventEmitter {
         } else {
           this.add({
             params: item.params,
-            scheduledAt: item.scheduledAt
+            scheduledAt: item.scheduledAt,
+            recurrence: item.recurrence
           });
           added++;
         }
