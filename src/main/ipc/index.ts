@@ -45,6 +45,7 @@ export function setupIpcHandlers(deps: IpcDeps): void {
 
   ipcMain.handle('app:getBuildInfo', () => {
     const candidates = [
+      join(process.resourcesPath, '.build', 'build-info.json'),
       join(process.resourcesPath, 'build-info.json'),
       join(process.cwd(), '.build', 'build-info.json')
     ];
