@@ -9,14 +9,14 @@ import { logger } from './engine/index.js';
 let tray: Tray | null = null;
 
 export function createTray(
-  mainWindow: BrowserWindow | null,
+  getMainWindow: () => BrowserWindow | null,
   scheduler: Scheduler,
   settingsManager: SettingsManager
 ): void {
   // Try to load icon from assets
   const iconPath = join(__dirname, '../renderer/assets/icon.ico');
   let icon: NativeImage;
-  
+
   try {
     icon = nativeImage.createFromPath(iconPath);
     if (icon.isEmpty()) {
@@ -27,15 +27,25 @@ export function createTray(
   } catch {
     icon = nativeImage.createEmpty();
   }
-  
+
   tray = new Tray(icon);
-  
   tray.setToolTip('Commishes Control Center');
-  
+
+  const showWindow = () => {
+    const win = getMainWindow();
+    if (!win || win.isDestroyed()) return;
+
+    if (win.isMinimized()) {
+      win.restore();
+    }
+    win.show();
+    win.focus();
+  };
+
   const updateMenu = () => {
     const settings = settingsManager.get();
     const schedulerStatus = scheduler.getStatus();
-    
+
     const menu = Menu.buildFromTemplate([
       {
         label: 'Commishes Control Center',
@@ -55,25 +65,24 @@ export function createTray(
       },
       {
         label: 'Show Window',
-        click: () => {
-          mainWindow?.show();
-          mainWindow?.focus();
-        }
+        click: showWindow
       },
       { type: 'separator' },
       {
         label: 'Settings',
         click: () => {
-          mainWindow?.show();
-          mainWindow?.focus();
-          mainWindow?.webContents.send('navigate:settings');
+          const win = getMainWindow();
+          if (!win || win.isDestroyed()) return;
+
+          showWindow();
+          win.webContents.send('navigate:settings');
         }
       },
       { type: 'separator' },
       {
         label: 'Quit',
         click: () => {
-          const win = mainWindow;
+          const win = getMainWindow();
           if (win && !win.isDestroyed()) {
             const response = dialog.showMessageBoxSync(win, {
               type: 'question',
@@ -92,23 +101,20 @@ export function createTray(
         }
       }
     ]);
-    
+
     tray?.setContextMenu(menu);
   };
-  
+
   updateMenu();
-  
+
   // Double click to show
-  tray.on('double-click', () => {
-    mainWindow?.show();
-    mainWindow?.focus();
-  });
-  
+  tray.on('double-click', showWindow);
+
   // Update menu when scheduler status changes
   scheduler.on('tick', updateMenu);
   scheduler.on('started', updateMenu);
   scheduler.on('stopped', updateMenu);
-  
+
   logger.info('Tray created');
 }
 
