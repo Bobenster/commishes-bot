@@ -8,8 +8,8 @@ export class CommishesEngine {
     return this.runWorkflow(params, session, jobId, false);
   }
 
-  async publish(params: AuctionParams, session: BotChromeSession, jobId = `publish-${Date.now()}`): Promise<DryRunResult> {
-    return this.runWorkflow(params, session, jobId, true);
+  async publish(_params: AuctionParams, _session: BotChromeSession, _jobId = `publish-${Date.now()}`): Promise<DryRunResult> {
+    throw new Error('Publish is disabled until the final confirmation step is explicitly enabled.');
   }
 
   private async runWorkflow(
