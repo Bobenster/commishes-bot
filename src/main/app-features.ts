@@ -103,18 +103,32 @@ export function setupGlobalShortcuts(mainWindow: () => BrowserWindow | null): vo
 
 export function setupWindowEvents(mainWindow: BrowserWindow, settingsManager: SettingsManager): void {
   const settings = settingsManager.get();
-  
+
   if (settings.app?.minimizeToTray) {
     mainWindow.on('minimize', (e: Electron.Event) => {
       e.preventDefault();
       mainWindow.hide();
     });
-
-    mainWindow.on('close', (e: Electron.Event) => {
-      if (!(app as any).isQuitting) {
-        e.preventDefault();
-        mainWindow.hide();
-      }
-    });
   }
+
+  mainWindow.on('close', (e: Electron.Event) => {
+    if ((app as any).isQuitting) return;
+
+    const response = require('electron').dialog.showMessageBoxSync(mainWindow, {
+      type: 'question',
+      buttons: ['Cancel', 'Exit'],
+      defaultId: 0,
+      cancelId: 0,
+      title: 'Quit Commishes Control Center?',
+      message: 'Exit the application?',
+      detail: 'The scheduler will stop and background automation will no longer run.'
+    });
+
+    if (response === 0) {
+      e.preventDefault();
+      return;
+    }
+
+    (app as any).isQuitting = true;
+  });
 }
