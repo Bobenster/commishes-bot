@@ -104,6 +104,12 @@ export class WatchdogManager extends EventEmitter {
     return this.getStatus();
   }
 
+  reportRendererError(message: string): void {
+    this.setStatus('renderer', 'warning', `Renderer error captured: ${message}`);
+    this.notifyFailure('renderer', `Renderer error captured: ${message}`);
+    this.emit('changed', this.getStatus());
+  }
+
   getStatus(): WatchdogStatus {
     return {
       enabled: this.interval !== null,
