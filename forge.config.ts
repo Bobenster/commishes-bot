@@ -11,6 +11,10 @@ const config: ForgeConfig = {
     extraResource: [
       'data',
       'images',
+      {
+        from: '.build/build-info.json',
+        to: 'build-info.json'
+      },
       'scripts/process-guardian.ps1'
     ]
   },
