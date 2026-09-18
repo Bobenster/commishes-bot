@@ -145,7 +145,8 @@ export class Runner extends EventEmitter {
     }
   }
 
-  // Manual run for "Run Now" or "Test Run" from UI
+  // Manual run for "Run Now" or "Test Run" from UI.
+  // Do not mutate SettingsManager just to force a dry-run.
   async runManual(job: QueueItem, mode: 'dry-run' | 'publish' = 'dry-run'): Promise<RunResult> {
     return this.run(job, mode);
   }
