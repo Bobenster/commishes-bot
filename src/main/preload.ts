@@ -22,6 +22,9 @@ interface HistoryItem {
   startedAt: string;
   finishedAt: string;
   success: boolean;
+  sourceParams?: any;
+  sourceScheduledAt?: string;
+  sourceRecurrence?: any;
   error?: string;
   auctionUrl?: string;
   stages: any[];
