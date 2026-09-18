@@ -43,6 +43,31 @@ export function setupIpcHandlers(deps: IpcDeps): void {
     return process.env.npm_package_version || '1.0.0';
   });
 
+  ipcMain.handle('app:getBuildInfo', () => {
+    const candidates = [
+      join(process.resourcesPath, 'build-info.json'),
+      join(process.cwd(), '.build', 'build-info.json')
+    ];
+
+    for (const filePath of candidates) {
+      try {
+        if (fs.existsSync(filePath)) {
+          return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        }
+      } catch (error) {
+        logger.warn('Failed to read build info:', error);
+      }
+    }
+
+    return {
+      version: process.env.npm_package_version || '1.0.0',
+      sourceCommit: 'dev',
+      sourceShort: 'dev',
+      buildAtUtc: null,
+      mode: 'development'
+    };
+  });
+
   ipcMain.handle('app:showWindow', () => {
     const win = mainWindow();
     if (win) {
