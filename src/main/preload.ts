@@ -154,6 +154,7 @@ contextBridge.exposeInMainWorld('api', {
   dialog: {
     openFile: (options: Electron.OpenDialogOptions) => ipcRenderer.invoke('dialog:openFile', options),
     saveFile: (options: Electron.SaveDialogOptions) => ipcRenderer.invoke('dialog:saveFile', options),
-    messageBox: (options: Electron.MessageBoxOptions) => ipcRenderer.invoke('dialog:messageBox', options)
+    messageBox: (options: Electron.MessageBoxOptions) => ipcRenderer.invoke('dialog:messageBox', options),
+    readImagePreview: (filePath: string) => ipcRenderer.invoke('dialog:readImagePreview', filePath)
   }
 });
