@@ -177,7 +177,7 @@ export class QueueTab {
     });
 
     tr.querySelector('.action-btn.run')?.addEventListener('click', async () => {
-      if (confirm(`Publish "${item.params.title}" now?`)) {
+      if (confirm(`Run "${item.params.title}" now?`)) {
         await queueStore.runNow(item.id);
       }
     });
