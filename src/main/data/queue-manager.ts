@@ -4,7 +4,7 @@ import { join } from 'path';
 import * as fs from 'fs';
 import { createStorage, ensureDataFiles } from './storage.js';
 import { normalizeQueueItem, normalizeQueueItems, runMigrations, queueMigrations, SCHEMA_VERSION } from './migrations.js';
-import { QueueItem, JobStatus, logger } from '../engine/index.js';
+import { AUCTION_DURATION_MS, QueueItem, JobStatus, RecurrenceSettings, logger } from '../engine/index.js';
 import { getAppDataPath } from '../shared/utils.js';
 
 const IMAGES_DIR = join(getAppDataPath(), 'images');
@@ -64,7 +64,7 @@ export class QueueManager extends EventEmitter {
     return this.queue.find(item => item.id === id);
   }
 
-  add(input: Pick<QueueItem, 'params' | 'scheduledAt'>): QueueItem {
+  add(input: Pick<QueueItem, 'params' | 'scheduledAt'> & { recurrence?: RecurrenceSettings }): QueueItem {
     const now = new Date().toISOString();
     const id = uuidv4();
 
@@ -78,7 +78,11 @@ export class QueueManager extends EventEmitter {
       retryCount: 0,
       maxRetries: 2,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      recurrence: {
+        enabled: input.recurrence?.enabled === true,
+        gapDays: Math.max(0, Number(input.recurrence?.gapDays ?? 1) || 0)
+      }
     } as QueueItem);
 
     this.queue.push(item);
@@ -161,6 +165,38 @@ export class QueueManager extends EventEmitter {
       lastError: error,
       updatedAt: new Date().toISOString()
     });
+  }
+
+  createNextOccurrence(id: string, now: Date = new Date()): QueueItem | undefined {
+    const current = this.getById(id);
+    if (!current?.recurrence?.enabled) return undefined;
+
+    const durationMs = AUCTION_DURATION_MS[current.params.duration];
+    const gapMs = current.recurrence.gapDays * 24 * 60 * 60 * 1000;
+
+    if (!durationMs || gapMs < 0) {
+      logger.warn('Cannot create recurring occurrence: invalid recurrence settings', { jobId: id });
+      return undefined;
+    }
+
+    let nextScheduledAtMs = now.getTime() + durationMs + gapMs;
+    if (!Number.isFinite(nextScheduledAtMs)) return undefined;
+
+    const next = this.add({
+      params: { ...current.params },
+      scheduledAt: new Date(nextScheduledAtMs).toISOString(),
+      recurrence: { ...current.recurrence }
+    });
+
+    logger.info('Created next recurring occurrence', {
+      sourceJobId: id,
+      nextJobId: next.id,
+      scheduledAt: next.scheduledAt,
+      duration: current.params.duration,
+      gapDays: current.recurrence.gapDays
+    });
+
+    return next;
   }
 
   markPaused(id: string): void {
