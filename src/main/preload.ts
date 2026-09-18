@@ -173,6 +173,7 @@ contextBridge.exposeInMainWorld('api', {
   // App
   app: {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
+    getBuildInfo: () => ipcRenderer.invoke('app:getBuildInfo'),
     showWindow: () => ipcRenderer.invoke('app:showWindow'),
     hideWindow: () => ipcRenderer.invoke('app:hideWindow'),
     quit: () => ipcRenderer.invoke('app:quit')
