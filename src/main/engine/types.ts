@@ -65,6 +65,8 @@ export interface HistoryItem {
   finishedAt: string;
   success: boolean;
   sourceParams?: AuctionParams;
+  sourceScheduledAt?: string;
+  sourceRecurrence?: RecurrenceSettings;
   error?: string;
   auctionUrl?: string;
   stages: StageLog[];
