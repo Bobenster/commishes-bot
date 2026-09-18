@@ -38,6 +38,7 @@ export class WatchdogManager extends EventEmitter {
   private lastRunnerProgressAt = Date.now();
   private alertCooldown = new Map<string, number>();
   private startedAt?: string;
+  private lastCheckAt?: string;
 
   constructor(
     private readonly queueManager: QueueManager,
@@ -90,15 +91,23 @@ export class WatchdogManager extends EventEmitter {
 
   async checkNow(): Promise<WatchdogStatus> {
     const checkedAt = new Date().toISOString();
+    this.lastCheckAt = checkedAt;
     this.setHealthy('main', 'Main process is responsive', checkedAt);
 
-    await this.checkRenderer(checkedAt);
-    await this.checkIpc(checkedAt);
-    await this.checkStorage(checkedAt);
-    await this.checkScheduler(checkedAt);
-    await this.checkRunner(checkedAt);
-    await this.checkChrome(checkedAt);
-    await this.checkCommishes(checkedAt);
+    try {
+      await this.checkRenderer(checkedAt);
+      await this.checkIpc(checkedAt);
+      await this.checkStorage(checkedAt);
+      await this.checkScheduler(checkedAt);
+      await this.checkRunner(checkedAt);
+      await this.checkChrome(checkedAt);
+      await this.checkCommishes(checkedAt);
+    } catch (error) {
+      const message = this.errorMessage(error);
+      this.setStatus('main', 'warning', `Watchdog check error: ${message}`, checkedAt);
+      this.notifyFailure('main', `Watchdog itself encountered an error: ${message}`);
+      logger.error('Watchdog check failed:', error);
+    }
 
     this.emit('changed', this.getStatus());
     return this.getStatus();
@@ -114,7 +123,7 @@ export class WatchdogManager extends EventEmitter {
     return {
       enabled: this.interval !== null,
       startedAt: this.startedAt,
-      lastCheckAt: new Date().toISOString(),
+      lastCheckAt: this.lastCheckAt,
       services: Array.from(this.services.values()).map(service => ({ ...service }))
     };
   }
@@ -132,6 +141,9 @@ export class WatchdogManager extends EventEmitter {
         this.setRecovering('scheduler', 'Scheduler restarted manually');
         break;
       case 'chrome':
+        if (this.runner.isRunning()) {
+          throw new Error('Chrome cannot be manually restarted while a job is running.');
+        }
         await this.chromeManager.restart();
         this.setRecovering('chrome', 'BOT Chrome restarted manually');
         break;
@@ -290,7 +302,14 @@ export class WatchdogManager extends EventEmitter {
       const url = session.page.url();
       const healthy = await this.withTimeout(session.page.evaluate(() => Boolean(document.body)), 2500, false);
       if (!healthy) {
-        throw new Error('Commishes page is not responsive');
+        if (this.runner.isRunning()) {
+          throw new Error('Commishes page is not responsive while a job is running');
+        }
+
+        this.setRecovering('commishes', 'Commishes page is unresponsive; reloading', checkedAt);
+        await session.page.reload({ waitUntil: 'domcontentloaded', timeout: 10000 });
+        this.setHealthy('commishes', 'Commishes page recovered after reload', checkedAt);
+        return;
       }
 
       if (url.toLowerCase().includes('ych.commishes.com')) {
