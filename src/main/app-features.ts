@@ -1,6 +1,6 @@
 /// <reference path="./electron-augmentation.d.ts" />
 
-import { app, globalShortcut, Notification, BrowserWindow } from 'electron';
+import { app, globalShortcut, Notification, BrowserWindow, dialog } from 'electron';
 import { SettingsManager } from './data/settings-manager.js';
 import { Scheduler } from './engine/scheduler.js';
 import { logger } from './engine/index.js';
@@ -114,7 +114,7 @@ export function setupWindowEvents(mainWindow: BrowserWindow, settingsManager: Se
   mainWindow.on('close', (e: Electron.Event) => {
     if ((app as any).isQuitting) return;
 
-    const response = require('electron').dialog.showMessageBoxSync(mainWindow, {
+    const response = dialog.showMessageBoxSync(mainWindow, {
       type: 'question',
       buttons: ['Cancel', 'Exit'],
       defaultId: 0,
@@ -129,6 +129,8 @@ export function setupWindowEvents(mainWindow: BrowserWindow, settingsManager: Se
       return;
     }
 
+    e.preventDefault();
     (app as any).isQuitting = true;
+    app.quit();
   });
 }
