@@ -34,6 +34,12 @@ export class Runner extends EventEmitter {
     const jobId = job.id;
     const jobLog = createJobLogger(jobId);
     const stages: JobProgress['stage'][] = [];
+    const settings = this.settingsManager.get();
+    const isTestMode = modeOverride === 'dry-run'
+      ? true
+      : modeOverride === 'publish'
+        ? false
+        : settings.engine.testMode;
 
     logger.info('Runner.run started', { jobId, hasParams: !!job.params, paramsKeys: job.params ? Object.keys(job.params) : 'none' });
 
@@ -64,14 +70,7 @@ export class Runner extends EventEmitter {
         this.currentSession = await this.chromeManager.restart();
       }
 
-      // Run dry run (test mode) or publish based on settings
-      const settings = this.settingsManager.get();
-      const isTestMode = modeOverride === 'dry-run'
-        ? true
-        : modeOverride === 'publish'
-          ? false
-          : settings.engine.testMode;
-
+      // Run dry run (test mode) or publish based on settings.
       emitProgress('navigate', 25, isTestMode ? 'Running DRY RUN...' : 'Publishing...');
       
       let result;
@@ -101,7 +100,8 @@ export class Runner extends EventEmitter {
           success: true,
           auctionUrl: result.auctionUrl,
           stages: result.stages,
-          isDryRun: isTestMode
+          isDryRun: isTestMode,
+          publishAttempted: result.publishAttempted
         });
 
         jobLog.writeResult(true);
@@ -109,7 +109,8 @@ export class Runner extends EventEmitter {
           success: true,
           auctionUrl: result.auctionUrl,
           stages: result.stages,
-          isDryRun: isTestMode
+          isDryRun: isTestMode,
+          publishAttempted: result.publishAttempted
         };
       } else {
         throw new Error(result.error || 'Unknown error');
@@ -134,7 +135,8 @@ export class Runner extends EventEmitter {
         success: false,
         error: errorMsg,
         stages: [],
-        isDryRun: isTestMode
+        isDryRun: isTestMode,
+        publishAttempted: false
       });
 
       jobLog.writeResult(false, errorMsg);

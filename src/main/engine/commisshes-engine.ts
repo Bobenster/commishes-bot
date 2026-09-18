@@ -8,8 +8,8 @@ export class CommishesEngine {
     return this.runWorkflow(params, session, jobId, false);
   }
 
-  async publish(_params: AuctionParams, _session: BotChromeSession, _jobId = `publish-${Date.now()}`): Promise<DryRunResult> {
-    throw new Error('Publish is disabled until the final confirmation step is explicitly enabled.');
+  async publish(params: AuctionParams, session: BotChromeSession, jobId = `publish-${Date.now()}`): Promise<DryRunResult> {
+    return this.runWorkflow(params, session, jobId, true);
   }
 
   private async runWorkflow(
@@ -20,6 +20,7 @@ export class CommishesEngine {
   ): Promise<DryRunResult> {
     const jobLog = this.jobLogger(jobId);
     const stages: StageLog[] = [];
+    let publishAttempted = false;
 
     const addStage = (stage: string, ok: boolean, durationMs: number, details?: Record<string, unknown>) => {
       stages.push({ stage, ok, timestamp: new Date().toISOString(), durationMs, details });
@@ -79,21 +80,24 @@ export class CommishesEngine {
           throw new Error('Start now! button not found on Page 3');
         }
 
-        addStage('publish_start', true, 0, { auctionUrl });
+        if (!(await startButton.isEnabled())) {
+          throw new Error('Start now! button is disabled on Page 3');
+        }
+
+        await startButton.scrollIntoViewIfNeeded();
+        const readyUrl = page.url();
+
+        addStage('publish_start', true, 0, { auctionUrl: readyUrl });
+        publishAttempted = true;
         await startButton.click();
 
-        try {
-          await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
-        } catch {}
-
-        await page.waitForTimeout(1000);
-
-        const stillOnReadyPage = page.url().includes('/auction/ready/');
-        const startButtonStillPresent = (await page.locator(SELECTORS.ready.startNowButton).count()) > 0;
-
-        if (stillOnReadyPage && startButtonStillPresent) {
-          throw new Error('Start now! click did not leave the confirmation page');
-        }
+        await page.waitForURL(
+          url => {
+            const nextUrl = url.toString();
+            return nextUrl !== readyUrl && !nextUrl.includes('/auction/ready/');
+          },
+          { timeout: 30000, waitUntil: 'domcontentloaded' }
+        );
 
         addStage('published', true, Date.now() - publishStart, {
           auctionUrl: page.url()
@@ -119,7 +123,7 @@ export class CommishesEngine {
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
-      logger.error('Dry run failed:', error);
+      logger.error('Automation failed:', error);
       
       // Try to capture screenshot
       try {
@@ -132,7 +136,8 @@ export class CommishesEngine {
       return {
         success: false,
         error: errorMsg,
-        stages
+        stages,
+        ...(publishAttempted ? { publishAttempted: true } : {})
       };
     }
   }
@@ -312,10 +317,18 @@ export class CommishesEngine {
     // Verify Start now! button exists (but don't click)
     const startButton = page.locator(SELECTORS.ready.startNowButton);
     const hasStartButton = (await startButton.count()) > 0;
-    addStage('verify_start_button', hasStartButton, 0, { found: hasStartButton });
+    const startButtonEnabled = hasStartButton && await startButton.isEnabled();
+    addStage('verify_start_button', hasStartButton && startButtonEnabled, 0, {
+      found: hasStartButton,
+      enabled: startButtonEnabled
+    });
 
     if (!hasStartButton) {
       throw new Error('Start now! button not found on Page 3');
+    }
+
+    if (!startButtonEnabled) {
+      throw new Error('Start now! button is disabled on Page 3');
     }
 
     return page.url();

@@ -18,7 +18,10 @@ Set-Location $scriptDir
 
 $appDir = Join-Path $scriptDir "out\commishes-control-center-win32-x64"
 $exePath = Join-Path $appDir "commishes-control-center.exe"
-$buildInfoPath = Join-Path $appDir "resources\build-info.json"
+$buildInfoPaths = @(
+    (Join-Path $appDir "resources\.build\build-info.json"),
+    (Join-Path $appDir "resources\build-info.json")
+)
 
 if ($Dev) {
     Write-Host "Starting development mode..." -ForegroundColor Cyan
@@ -68,15 +71,17 @@ function Get-LatestProjectWriteTime {
 }
 
 function Get-PackagedBuildInfo {
-    if (-not (Test-Path $buildInfoPath)) {
-        return $null
+    foreach ($path in $buildInfoPaths) {
+        if (Test-Path $path) {
+            try {
+                return Get-Content -Raw $path | ConvertFrom-Json
+            } catch {
+                # Try the fallback location.
+            }
+        }
     }
 
-    try {
-        return Get-Content -Raw $buildInfoPath | ConvertFrom-Json
-    } catch {
-        return $null
-    }
+    return $null
 }
 
 $needsBuild = $Build -or -not (Test-Path $exePath)

@@ -47,8 +47,8 @@ export function setupQueueIpc(deps: QueueIpcDeps): void {
     
     logger.info('queue:runNow', { jobId: id, hasParams: !!job.params, paramsKeys: job.params ? Object.keys(job.params) : 'none' });
     
-    // Run in background
-    runner.runManual(job, 'dry-run').catch(err => {
+    // Run in background and publish the auction. Test Run remains dry-run.
+    runner.runManual(job, 'publish').catch(err => {
       logger.error('Manual run failed:', err);
     });
     

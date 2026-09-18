@@ -33,7 +33,7 @@ function createWindow() {
     minHeight: 600,
     show: false,
     title: 'Commishes Control Center',
-    icon: join(__dirname, '../renderer/assets/icon.svg'),
+    icon: join(__dirname, '../renderer/assets/icon.ico'),
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       contextIsolation: true,

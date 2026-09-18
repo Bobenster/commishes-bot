@@ -86,6 +86,7 @@ export interface DryRunResult {
   auctionUrl?: string;
   error?: string;
   stages: StageLog[];
+  publishAttempted?: boolean;
 }
 
 export interface PublishResult {
@@ -100,6 +101,7 @@ export interface RunResult {
   error?: string;
   stages: StageLog[];
   isDryRun: boolean;
+  publishAttempted?: boolean;
 }
 
 export interface SchedulerStatus {
@@ -157,7 +159,7 @@ export const DEFAULT_SETTINGS: Settings = {
     autoStart: false
   },
   engine: {
-    testMode: true,
+    testMode: false,
     imagesDir: 'C:\\commishes-bot\\images'
   },
   app: {
@@ -177,7 +179,7 @@ export interface HistoryFilter {
 }
 
 // Migration exports
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export interface Migration<T> {
   version: number;
