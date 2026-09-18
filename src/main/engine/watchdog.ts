@@ -268,16 +268,29 @@ export class WatchdogManager extends EventEmitter {
     }
 
     try {
-      const healthy = await this.chromeManager.healthCheck(session);
-      if (healthy) {
-        this.setHealthy('chrome', `Connected on CDP port ${session.port}`, checkedAt);
+      let healthy = await this.chromeManager.healthCheck(session);
+
+      // Playwright navigation can briefly destroy the page execution context even
+      // while Chrome/CDP itself is healthy. Recheck before warning during a job.
+      if (!healthy && this.runner.isRunning()) {
+        for (let attempt = 1; attempt <= 2 && !healthy; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          healthy = await this.chromeManager.healthCheck(session);
+        }
+
+        if (healthy) {
+          this.setHealthy('chrome', `Connected on CDP port ${session.port}; transient check recovered during active job`, checkedAt);
+          return;
+        }
+
+        const message = 'Chrome health check is still failing while a job is running; no automatic restart was performed to avoid duplicate auction actions';
+        this.setStatus('chrome', 'warning', message, checkedAt);
+        this.notifyFailure('chrome', message);
         return;
       }
 
-      if (this.runner.isRunning()) {
-        const message = 'Chrome session is unhealthy while a job is running; automatic restart is blocked to avoid duplicate auction actions';
-        this.setStatus('chrome', 'warning', message, checkedAt);
-        this.notifyFailure('chrome', message);
+      if (healthy) {
+        this.setHealthy('chrome', `Connected on CDP port ${session.port}`, checkedAt);
         return;
       }
 

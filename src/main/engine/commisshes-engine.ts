@@ -93,7 +93,12 @@ export class CommishesEngine {
         const publishNavigation = page.waitForURL(
           url => {
             const nextUrl = url.toString();
-            return nextUrl !== readyUrl && !nextUrl.includes('/auction/ready/');
+            // Commishes may keep the /auction/ready/ path after a successful
+            // start and append ?start=. That URL is the site's confirmation state.
+            const startConfirmed = /\/auction\/ready\/.*\?start(?:=|$)/i.test(nextUrl);
+            return nextUrl !== readyUrl && (
+              !nextUrl.includes('/auction/ready/') || startConfirmed
+            );
           },
           { timeout: 30000, waitUntil: 'domcontentloaded' }
         );
