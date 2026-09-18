@@ -32,7 +32,9 @@ export class SettingsManager extends EventEmitter {
 
   private persist(): void {
     settingsStorage.save(this.settings);
-    this.emit('changed');
+    // Emit the current settings so listeners such as auto-launch handling
+    // never receive an undefined payload after a settings update.
+    this.emit('changed', this.get());
   }
 
   get(): Settings {
