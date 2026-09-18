@@ -1,4 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
+import * as fs from 'fs';
+import { extname } from 'path';
 import { setupQueueIpc } from './queue.js';
 import { setupHistoryIpc } from './history.js';
 import { setupSettingsIpc } from './settings.js';
@@ -76,6 +78,27 @@ export function setupIpcHandlers(deps: IpcDeps): void {
     const win = mainWindow();
     if (!win) return { response: 0 };
     return dialog.showMessageBox(win, options);
+  });
+
+  ipcMain.handle('dialog:readImagePreview', async (_, filePath: string) => {
+    if (!filePath) throw new Error('Image path is empty');
+
+    const allowed = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp']);
+    const extension = extname(filePath).toLowerCase();
+    if (!allowed.has(extension)) {
+      throw new Error('Unsupported image format');
+    }
+
+    const data = fs.readFileSync(filePath);
+    const mime = extension === '.jpg' || extension === '.jpeg'
+      ? 'image/jpeg'
+      : extension === '.webp'
+        ? 'image/webp'
+        : extension === '.gif'
+          ? 'image/gif'
+          : 'image/png';
+
+    return `data:${mime};base64,${data.toString('base64')}`;
   });
 
   logger.info('IPC handlers registered');
