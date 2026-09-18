@@ -1,6 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron';
 import * as fs from 'fs';
-import { extname } from 'path';
+import { extname, join } from 'path';
 import { setupQueueIpc } from './queue.js';
 import { setupHistoryIpc } from './history.js';
 import { setupSettingsIpc } from './settings.js';
