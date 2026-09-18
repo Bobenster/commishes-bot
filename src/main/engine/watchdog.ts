@@ -274,7 +274,7 @@ export class WatchdogManager extends EventEmitter {
     }
 
     try {
-      const url = await this.withTimeout(session.page.url(), 1500, '');
+      const url = session.page.url();
       const healthy = await this.withTimeout(session.page.evaluate(() => Boolean(document.body)), 2500, false);
       if (!healthy) {
         throw new Error('Commishes page is not responsive');
