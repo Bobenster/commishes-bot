@@ -48,6 +48,7 @@
       <button class="tab" role="tab" data-tab="queue" aria-selected="true">Queue</button>
       <button class="tab" role="tab" data-tab="history" aria-selected="false">History</button>
       <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
+      <button class="tab" role="tab" data-tab="watchdog" aria-selected="false">Watchdog</button>
     </nav>
 
     <!-- Tab Panels -->
@@ -248,6 +249,39 @@
           <div class="settings-actions">
             <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
           </div>
+        </div>
+      </section>
+
+      <!-- Watchdog Tab -->
+      <section class="tab-panel" id="watchdogPanel" role="tabpanel" aria-labelledby="watchdogTab" hidden>
+        <div class="panel-header">
+          <div>
+            <h2>Watchdog</h2>
+            <small class="form-help">Automatically checks the app, scheduler, Chrome/CDP and Commishes session. Recoverable failures are restarted; unrecoverable failures trigger a notification.</small>
+          </div>
+          <button class="btn btn-secondary" id="watchdogRefreshBtn">Check Now</button>
+        </div>
+
+        <div id="watchdogOverall" class="watchdog-overall healthy">🟢 Checking monitored services...</div>
+
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Status</th>
+                <th>Details</th>
+                <th>Restarts</th>
+                <th>Last Check</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="watchdogTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="watchdog-note">
+          <strong>Protection:</strong> renderer crashes/unresponsive states are automatically reloaded. The main process logs uncaught failures and the external process guardian restarts a packaged app after an unexpected process exit. A running automation is never force-killed by the watchdog because doing so could duplicate an auction action.
         </div>
       </section>
     </main>
