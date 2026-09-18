@@ -128,6 +128,7 @@ export class JobModal {
 
   open(job?: QueueItem): void {
     this.resetForm();
+    this.ensureFormInteractive();
 
     if (job) {
       this.isEdit = true;
@@ -151,6 +152,7 @@ export class JobModal {
 
   private openClone(source: CloneSource): void {
     this.resetForm();
+    this.ensureFormInteractive();
     this.isEdit = false;
     this.currentJob = null;
     this.titleEl.textContent = 'New Publication';
@@ -192,8 +194,30 @@ export class JobModal {
   close(): void {
     this.modal.hidden = true;
     this.resetForm();
+    this.ensureFormInteractive();
     this.currentJob = null;
     this.isEdit = false;
+  }
+
+  /**
+   * The modal should never inherit a stale locked state from a previous action.
+   * Only the two reference-workflow checkboxes are intentionally disabled.
+   */
+  private ensureFormInteractive(): void {
+    this.modal.removeAttribute('inert');
+    this.form.removeAttribute('inert');
+
+    const intentionallyDisabled = new Set(['jobNsfw', 'jobPreventSniping']);
+    this.form.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>(
+      'input, select, textarea, button'
+    ).forEach(control => {
+      if (intentionallyDisabled.has(control.id)) {
+        control.disabled = true;
+      } else {
+        control.disabled = false;
+        control.removeAttribute('readonly');
+      }
+    });
   }
 
   private resetForm(): void {
@@ -207,6 +231,8 @@ export class JobModal {
     this.repeatCheckbox.checked = false;
     this.repeatOptions.hidden = true;
     this.repeatSummary.textContent = '';
+    this.saveBtn.disabled = false;
+    this.saveBtn.textContent = this.isEdit ? 'Save Changes' : 'Add to Queue';
   }
 
   private setDefaultDateTime(): void {
