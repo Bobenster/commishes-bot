@@ -10,6 +10,12 @@ interface JobData {
   recurrence?: RecurrenceSettings;
 }
 
+interface CloneSource {
+  params: AuctionParams;
+  scheduledAt: string;
+  recurrence?: RecurrenceSettings;
+}
+
 const DURATION_LABELS: Record<AuctionDuration, string> = {
   '24h': '24 hours',
   '3d': '3 days',
@@ -109,6 +115,11 @@ export class JobModal {
     modal.open();
   }
 
+  static openForClone(source: CloneSource): void {
+    const modal = new JobModal();
+    modal.openClone(source);
+  }
+
   open(job?: QueueItem): void {
     this.resetForm();
 
@@ -126,6 +137,46 @@ export class JobModal {
       this.setDefaultDateTime();
       this.updateRepeatUI();
     }
+
+    this.modal.hidden = false;
+    const firstInput = this.form.querySelector('input:not([type="checkbox"]):not([type="radio"]), select') as HTMLElement;
+    firstInput?.focus();
+  }
+
+  private openClone(source: CloneSource): void {
+    this.resetForm();
+    this.isEdit = false;
+    this.currentJob = null;
+    this.titleEl.textContent = 'New Publication';
+    this.saveBtn.textContent = 'Add to Queue';
+
+    const params = { ...source.params, imagePath: '' };
+    (document.getElementById('jobCategory') as HTMLSelectElement).value = params.category;
+    (document.getElementById('jobSubtitle') as HTMLInputElement).value = params.subtitle;
+    (document.getElementById('jobTitle') as HTMLInputElement).value = params.title;
+    (document.getElementById('jobDescription') as HTMLTextAreaElement).value = params.description;
+
+    const ratingInput = document.querySelector(`input[name="rating"][value="${params.rating}"]`) as HTMLInputElement;
+    if (ratingInput) ratingInput.checked = true;
+
+    (document.getElementById('jobNsfw') as HTMLInputElement).checked = false;
+    (document.getElementById('jobPreventSniping') as HTMLInputElement).checked = false;
+    (document.getElementById('jobDuration') as HTMLSelectElement).value = params.duration;
+    (document.getElementById('jobPromoted') as HTMLInputElement).checked = params.promoted;
+    (document.getElementById('jobStartingBid') as HTMLInputElement).value = params.startingBid;
+    (document.getElementById('jobMinIncrease') as HTMLInputElement).value = params.minIncrease;
+    (document.getElementById('jobAutobuyEnabled') as HTMLInputElement).checked = params.autobuyEnabled;
+    (document.getElementById('jobAutobuy') as HTMLInputElement).value = params.autobuy;
+    document.getElementById('jobAutobuyGroup')!.style.display = params.autobuyEnabled ? 'block' : 'none';
+
+    const sourceDate = new Date(source.scheduledAt);
+    const minimum = new Date(Date.now() + 5 * 60 * 1000);
+    const scheduled = !Number.isNaN(sourceDate.getTime()) && sourceDate > minimum ? sourceDate : minimum;
+    this.writeLocalDateTime(scheduled);
+
+    this.repeatCheckbox.checked = source.recurrence?.enabled === true;
+    this.repeatGapInput.value = String(source.recurrence?.gapDays ?? 1);
+    this.updateRepeatUI();
 
     this.modal.hidden = false;
     const firstInput = this.form.querySelector('input:not([type="checkbox"]):not([type="radio"]), select') as HTMLElement;
