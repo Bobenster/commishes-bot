@@ -1,4 +1,4 @@
-import { AuctionParams, QueueItem, Settings, DEFAULT_SETTINGS } from '../engine/types.js';
+import { AuctionDuration, AuctionParams, QueueItem, Settings, DEFAULT_SETTINGS } from '../engine/types.js';
 import { logger } from '../shared/logger.js';
 
 export const SCHEMA_VERSION = 3;
@@ -25,6 +25,24 @@ const LEGACY_QUEUE_PARAM_KEYS: Array<keyof AuctionParams> = [
   'autobuy'
 ];
 
+function normalizeDuration(raw: unknown): AuctionDuration {
+  switch (String(raw ?? '')) {
+    case '24h':
+    case '24':
+      return '24h';
+    case '3d':
+    case '72':
+      return '3d';
+    case '7d':
+    case '168':
+      return '7d';
+    default:
+      // Older builds offered unsupported durations (1/3/6/12/48 hours).
+      // Fall back to the one duration verified by the reference workflow.
+      return '24h';
+  }
+}
+
 function normalizeAuctionParams(raw: Partial<AuctionParams> | undefined): AuctionParams {
   return {
     imagePath: raw?.imagePath ?? '',
@@ -34,9 +52,9 @@ function normalizeAuctionParams(raw: Partial<AuctionParams> | undefined): Auctio
     description: raw?.description ?? '',
     rating: raw?.rating === '1' || raw?.rating === '2' || raw?.rating === '3' ? raw.rating : '0',
     nsfw: raw?.nsfw ?? false,
-    preventSniping: raw?.preventSniping ?? false,
+    preventSniping: false,
     promoted: raw?.promoted ?? false,
-    duration: raw?.duration ?? '24',
+    duration: normalizeDuration(raw?.duration),
     startingBid: raw?.startingBid ?? '',
     minIncrease: raw?.minIncrease ?? '',
     autobuyEnabled: raw?.autobuyEnabled ?? false,
@@ -62,7 +80,13 @@ export function normalizeQueueItem(item: QueueItem | Record<string, any>): Queue
 
   const normalized: QueueItem = {
     ...raw,
-    params: normalizeAuctionParams(rawParams)
+    params: normalizeAuctionParams(rawParams),
+    recurrence: {
+      enabled: raw.recurrence?.enabled === true,
+      gapDays: Number.isFinite(Number(raw.recurrence?.gapDays))
+        ? Math.max(0, Number(raw.recurrence.gapDays))
+        : 1
+    }
   } as QueueItem;
 
   // Remove legacy top-level auction fields once params has been created.
