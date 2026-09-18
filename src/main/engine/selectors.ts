@@ -17,6 +17,7 @@ export const SELECTORS = {
   // Page 2 - Start Auction
   start: {
     promoted: 'input[name="promoted"]',
+    durationInputs: 'input[name="duration"]',
     duration: (value: string) => `input[name="duration"][value="${value}"]`,
     form: 'form.regular',
     goButton: 'form.regular button'
