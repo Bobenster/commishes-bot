@@ -1,6 +1,6 @@
 /// <reference path="./electron-augmentation.d.ts" />
 
-import { Tray, Menu, nativeImage, app, BrowserWindow, NativeImage } from 'electron';
+import { Tray, Menu, nativeImage, app, BrowserWindow, NativeImage, dialog } from 'electron';
 import { join } from 'path';
 import { Scheduler } from './engine/scheduler.js';
 import { SettingsManager } from './data/settings-manager.js';
@@ -73,6 +73,20 @@ export function createTray(
       {
         label: 'Quit',
         click: () => {
+          const win = mainWindow;
+          if (win && !win.isDestroyed()) {
+            const response = dialog.showMessageBoxSync(win, {
+              type: 'question',
+              buttons: ['Cancel', 'Exit'],
+              defaultId: 0,
+              cancelId: 0,
+              title: 'Quit Commishes Control Center?',
+              message: 'Exit the application?',
+              detail: 'The scheduler will stop and background automation will no longer run.'
+            });
+            if (response === 0) return;
+          }
+
           (app as any).isQuitting = true;
           app.quit();
         }
