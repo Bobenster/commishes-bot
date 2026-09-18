@@ -4,9 +4,20 @@ import { AuctionParams, DryRunResult, StageLog, BotChromeSession, logger, create
 export class CommishesEngine {
   private jobLogger = createJobLogger;
 
-  // Main entry point - DRY RUN only (stops at Page 3)
-  async dryRun(params: AuctionParams, session: BotChromeSession): Promise<DryRunResult> {
-    const jobId = `dryrun-${Date.now()}`;
+  async dryRun(params: AuctionParams, session: BotChromeSession, jobId = `dryrun-${Date.now()}`): Promise<DryRunResult> {
+    return this.runWorkflow(params, session, jobId, false);
+  }
+
+  async publish(params: AuctionParams, session: BotChromeSession, jobId = `publish-${Date.now()}`): Promise<DryRunResult> {
+    return this.runWorkflow(params, session, jobId, true);
+  }
+
+  private async runWorkflow(
+    params: AuctionParams,
+    session: BotChromeSession,
+    jobId: string,
+    shouldPublish: boolean
+  ): Promise<DryRunResult> {
     const jobLog = this.jobLogger(jobId);
     const stages: StageLog[] = [];
 
@@ -60,6 +71,42 @@ export class CommishesEngine {
       const auctionUrl = await this.fillPage3(page, params, addStage);
       addStage('page3_fill', true, Date.now() - page3Start);
 
+      if (shouldPublish) {
+        const publishStart = Date.now();
+        const startButton = page.locator(SELECTORS.ready.startNowButton);
+
+        if (!(await startButton.count())) {
+          throw new Error('Start now! button not found on Page 3');
+        }
+
+        addStage('publish_start', true, 0, { auctionUrl });
+        await startButton.click();
+
+        try {
+          await page.waitForLoadState('domcontentloaded', { timeout: 10000 });
+        } catch {}
+
+        await page.waitForTimeout(1000);
+
+        const stillOnReadyPage = page.url().includes('/auction/ready/');
+        const startButtonStillPresent = (await page.locator(SELECTORS.ready.startNowButton).count()) > 0;
+
+        if (stillOnReadyPage && startButtonStillPresent) {
+          throw new Error('Start now! click did not leave the confirmation page');
+        }
+
+        addStage('published', true, Date.now() - publishStart, {
+          auctionUrl: page.url()
+        });
+
+        jobLog.writeResult(true);
+        return {
+          success: true,
+          auctionUrl: page.url(),
+          stages
+        };
+      }
+
       // DRY RUN: Stop here, do NOT click "Start now!"
       addStage('dryrun_complete', true, Date.now() - page3Start, { auctionUrl });
 
@@ -88,11 +135,6 @@ export class CommishesEngine {
         stages
       };
     }
-  }
-
-  // Full publish - NOT IMPLEMENTED (requires explicit user consent)
-  async publish(params: AuctionParams, session: BotChromeSession): Promise<{ success: boolean; auctionUrl?: string; error?: string }> {
-    throw new Error('Publish not implemented - requires explicit user consent. Use dryRun for testing.');
   }
 
   private async ensureCreatePage(page: Page): Promise<void> {
