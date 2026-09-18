@@ -29,7 +29,7 @@ export class Runner extends EventEmitter {
     this.engine = new CommishesEngine();
   }
 
-  async run(job: QueueItem): Promise<RunResult> {
+  async run(job: QueueItem, modeOverride?: 'dry-run' | 'publish'): Promise<RunResult> {
     this.currentJob = job;
     const jobId = job.id;
     const jobLog = createJobLogger(jobId);
@@ -66,16 +66,19 @@ export class Runner extends EventEmitter {
 
       // Run dry run (test mode) or publish based on settings
       const settings = this.settingsManager.get();
-      const isTestMode = settings.engine.testMode;
+      const isTestMode = modeOverride === 'dry-run'
+        ? true
+        : modeOverride === 'publish'
+          ? false
+          : settings.engine.testMode;
 
       emitProgress('navigate', 25, isTestMode ? 'Running DRY RUN...' : 'Publishing...');
       
       let result;
       if (isTestMode) {
-        result = await this.engine.dryRun(job.params, this.currentSession);
+        result = await this.engine.dryRun(job.params, this.currentSession, jobId);
       } else {
-        // This will throw - publish requires explicit user consent
-        throw new Error('Publish mode not available in automatic scheduler. Use manual "Publish now" from UI.');
+        result = await this.engine.publish(job.params, this.currentSession, jobId);
       }
 
       // Process result
@@ -95,7 +98,7 @@ export class Runner extends EventEmitter {
           success: true,
           auctionUrl: result.auctionUrl,
           stages: result.stages,
-          isDryRun: true
+          isDryRun: isTestMode
         });
 
         jobLog.writeResult(true);
@@ -103,7 +106,7 @@ export class Runner extends EventEmitter {
           success: true,
           auctionUrl: result.auctionUrl,
           stages: result.stages,
-          isDryRun: true
+          isDryRun: isTestMode
         };
       } else {
         throw new Error(result.error || 'Unknown error');
@@ -125,7 +128,7 @@ export class Runner extends EventEmitter {
         success: false,
         error: errorMsg,
         stages: [],
-        isDryRun: true
+        isDryRun: isTestMode
       });
 
       jobLog.writeResult(false, errorMsg);
@@ -134,7 +137,7 @@ export class Runner extends EventEmitter {
         success: false,
         error: errorMsg,
         stages: [],
-        isDryRun: true
+        isDryRun: isTestMode
       };
 
     } finally {
@@ -143,21 +146,8 @@ export class Runner extends EventEmitter {
   }
 
   // Manual run for "Run Now" or "Test Run" from UI
-  async runManual(job: QueueItem, forceDryRun: boolean = true): Promise<RunResult> {
-    // Temporarily override test mode
-    const originalTestMode = this.settingsManager.get().engine.testMode;
-    
-    if (forceDryRun) {
-      this.settingsManager.updateEngineSettings({ testMode: true });
-    }
-
-    try {
-      return await this.run(job);
-    } finally {
-      if (forceDryRun) {
-        this.settingsManager.updateEngineSettings({ testMode: originalTestMode });
-      }
-    }
+  async runManual(job: QueueItem, mode: 'dry-run' | 'publish' = 'dry-run'): Promise<RunResult> {
+    return this.run(job, mode);
   }
 
   getCurrentJob(): QueueItem | null {
