@@ -10,7 +10,8 @@ const config: ForgeConfig = {
     icon: 'src/renderer/assets/icon.ico',
     extraResource: [
       'data',
-      'images'
+      'images',
+      'scripts/process-guardian.ps1'
     ]
   },
   rebuildConfig: {},
