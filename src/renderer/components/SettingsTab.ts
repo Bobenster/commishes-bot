@@ -20,7 +20,7 @@ export class SettingsTab {
       'browseChromePath', 'browseProfilePath', 'checkChromeBtn', 'chromeCheckResult',
       'settingInterval', 'settingCooldown', 'settingMaxRetries', 'settingAutoStart',
       'settingTestMode', 'settingImagesDir', 'browseImagesDir',
-      'settingAutoLaunch', 'settingMinimizeToTray', 'settingNotifications',
+      'settingAutoLaunch', 'settingNotifications',
       'exportQueueBtn', 'importQueueBtn', 'exportHistoryBtn', 'exportSettingsBtn',
       'resetSettingsBtn', 'saveSettingsBtn'
     ];
@@ -90,7 +90,6 @@ export class SettingsTab {
 
     // App
     (this.elements.settingAutoLaunch as HTMLInputElement).checked = settings.app?.autoLaunch || false;
-    (this.elements.settingMinimizeToTray as HTMLInputElement).checked = settings.app?.minimizeToTray ?? true;
     (this.elements.settingNotifications as HTMLInputElement).checked = settings.app?.notifications ?? true;
   }
 
@@ -210,7 +209,6 @@ export class SettingsTab {
         },
         app: {
           autoLaunch: (this.elements.settingAutoLaunch as HTMLInputElement).checked,
-          minimizeToTray: (this.elements.settingMinimizeToTray as HTMLInputElement).checked,
           notifications: (this.elements.settingNotifications as HTMLInputElement).checked
         }
       };
