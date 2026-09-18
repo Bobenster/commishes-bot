@@ -262,6 +262,13 @@ export class WatchdogManager extends EventEmitter {
         return;
       }
 
+      if (this.runner.isRunning()) {
+        const message = 'Chrome session is unhealthy while a job is running; automatic restart is blocked to avoid duplicate auction actions';
+        this.setStatus('chrome', 'warning', message, checkedAt);
+        this.notifyFailure('chrome', message);
+        return;
+      }
+
       this.setRecovering('chrome', 'Chrome session is unhealthy; restarting', checkedAt);
       await this.chromeManager.restart();
       this.setHealthy('chrome', 'Chrome recovered after restart', checkedAt);
