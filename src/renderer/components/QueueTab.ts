@@ -127,6 +127,12 @@ export class QueueTab {
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
+          <button class="action-btn clone" title="Make New">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
           <button class="action-btn run" title="Run Now" ${!canRun ? 'disabled' : ''}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="5 3 19 12 5 21 5 3"/>
@@ -174,6 +180,10 @@ export class QueueTab {
   private bindRowEvents(tr: HTMLTableRowElement, item: any): void {
     tr.querySelector('.action-btn.edit')?.addEventListener('click', () => {
       JobModal.openForEdit(item);
+    });
+
+    tr.querySelector('.action-btn.clone')?.addEventListener('click', () => {
+      JobModal.openForClone(item);
     });
 
     tr.querySelector('.action-btn.run')?.addEventListener('click', async () => {
