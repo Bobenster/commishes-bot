@@ -3,6 +3,7 @@
 import { historyStore } from '../stores/historyStore.js';
 import { uiStore } from '../stores/uiStore.js';
 import { LogModal } from './LogModal.js';
+import { JobModal } from './JobModal.js';
 
 export class HistoryTab {
   private tbody: HTMLTableSectionElement;
@@ -99,6 +100,12 @@ export class HistoryTab {
       <td>${duration}</td>
       <td>${auctionLink}</td>
       <td>
+        <button class="action-btn clone" title="Make New">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
         <button class="action-btn log" title="View Details">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -112,6 +119,27 @@ export class HistoryTab {
   }
 
   private bindRowEvents(tr: HTMLTableRowElement, item: any): void {
+    const cloneBtn = tr.querySelector<HTMLButtonElement>('.action-btn.clone');
+    cloneBtn?.addEventListener('click', async () => {
+      const sourceParams = item.sourceParams;
+      if (sourceParams) {
+        JobModal.openForClone({
+          params: sourceParams,
+          scheduledAt: item.sourceScheduledAt || item.startedAt,
+          recurrence: item.sourceRecurrence
+        });
+        return;
+      }
+
+      const source = await window.api.queue.getById(item.queueItemId);
+      if (!source) {
+        alert('Original queue item is no longer available, so its publication data cannot be cloned.');
+        return;
+      }
+
+      JobModal.openForClone(source);
+    });
+
     const logBtn = tr.querySelector<HTMLButtonElement>('.action-btn.log');
     logBtn?.addEventListener('click', async () => {
       const log = await historyStore.getLog(item.queueItemId);
