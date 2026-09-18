@@ -18,6 +18,7 @@ export class Scheduler extends EventEmitter {
   private jobsSucceeded: number = 0;
   private jobsFailed: number = 0;
   private lastRunAt?: Date;
+  private desiredRunning = false;
 
   constructor(
     queueManager: QueueManager,
@@ -36,6 +37,7 @@ export class Scheduler extends EventEmitter {
       return;
     }
 
+    this.desiredRunning = true;
     this.intervalMs = intervalMs || this.settingsManager.get().scheduler.intervalMs || 5000;
     this.jobsProcessed = 0;
     this.jobsSucceeded = 0;
@@ -53,12 +55,18 @@ export class Scheduler extends EventEmitter {
   }
 
   stop(): void {
+    this.desiredRunning = false;
+
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
       logger.info('Scheduler stopped');
       this.emit('stopped');
     }
+  }
+
+  shouldBeRunning(): boolean {
+    return this.desiredRunning;
   }
 
   private async tick(): Promise<void> {
