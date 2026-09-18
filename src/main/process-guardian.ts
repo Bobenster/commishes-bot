@@ -7,7 +7,7 @@ import { logger } from './shared/logger.js';
 
 const GUARD_DIR = join(getAppDataPath(), 'watchdog');
 const STATE_FILE = join(GUARD_DIR, 'process-state.json');
-const GUARD_SCRIPT = join(process.resourcesPath, '..', 'scripts', 'process-guardian.ps1');
+const GUARD_SCRIPT = join(process.resourcesPath, 'process-guardian.ps1');
 
 interface GuardianState {
   pid: number;
