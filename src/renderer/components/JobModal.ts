@@ -1,13 +1,26 @@
 // JobModal Component - Create/Edit publication
 
 import { queueStore } from '../stores/queueStore.js';
-import { settingsStore } from '../stores/settingsStore.js';
+import type { AuctionDuration, AuctionParams, QueueItem, RecurrenceSettings } from '../../main/engine/types.js';
 
 interface JobData {
   id?: string;
-  params: any;
+  params: AuctionParams;
   scheduledAt: string;
+  recurrence?: RecurrenceSettings;
 }
+
+const DURATION_LABELS: Record<AuctionDuration, string> = {
+  '24h': '24 hours',
+  '3d': '3 days',
+  '7d': '7 days'
+};
+
+const DURATION_DAYS: Record<AuctionDuration, number> = {
+  '24h': 1,
+  '3d': 3,
+  '7d': 7
+};
 
 export class JobModal {
   private modal: HTMLElement;
@@ -19,7 +32,11 @@ export class JobModal {
   private imageBtn: HTMLButtonElement;
   private imageText: HTMLElement;
   private imagePreview: HTMLElement;
-  private selectedImagePath: string = '';
+  private repeatCheckbox: HTMLInputElement;
+  private repeatOptions: HTMLElement;
+  private repeatGapInput: HTMLInputElement;
+  private repeatSummary: HTMLElement;
+  private selectedImagePath = '';
   private currentJob: JobData | null = null;
   private isEdit = false;
 
@@ -33,6 +50,10 @@ export class JobModal {
     this.imageBtn = document.getElementById('jobImageBtn') as HTMLButtonElement;
     this.imageText = document.getElementById('jobImageText')!;
     this.imagePreview = document.getElementById('imagePreview')!;
+    this.repeatCheckbox = document.getElementById('jobRepeat') as HTMLInputElement;
+    this.repeatOptions = document.getElementById('jobRepeatOptions')!;
+    this.repeatGapInput = document.getElementById('jobRepeatGap') as HTMLInputElement;
+    this.repeatSummary = document.getElementById('jobRepeatSummary')!;
 
     this.bindEvents();
   }
@@ -40,26 +61,34 @@ export class JobModal {
   private bindEvents(): void {
     this.closeBtn.addEventListener('click', () => this.close());
     this.cancelBtn.addEventListener('click', () => this.close());
+
     this.modal.addEventListener('click', (e) => {
       if (e.target === this.modal) this.close();
     });
 
     this.form.addEventListener('submit', (e) => {
       e.preventDefault();
-      this.save();
+      void this.save();
     });
 
-    // Image select button
-    this.imageBtn.addEventListener('click', () => this.browseImage());
+    this.imageBtn.addEventListener('click', () => void this.browseImage());
 
-    // Autobuy toggle
     const autobuyEnabled = document.getElementById('jobAutobuyEnabled') as HTMLInputElement;
     const autobuyGroup = document.getElementById('jobAutobuyGroup')!;
     autobuyEnabled.addEventListener('change', () => {
       autobuyGroup.style.display = autobuyEnabled.checked ? 'block' : 'none';
     });
 
-    // Escape key
+    document.getElementById('jobDateMinus')?.addEventListener('click', () => this.adjustDate(-1));
+    document.getElementById('jobDatePlus')?.addEventListener('click', () => this.adjustDate(1));
+    document.getElementById('jobTimeMinus')?.addEventListener('click', () => this.adjustHour(-1));
+    document.getElementById('jobTimePlus')?.addEventListener('click', () => this.adjustHour(1));
+
+    this.repeatCheckbox.addEventListener('change', () => this.updateRepeatUI());
+    this.repeatGapInput.addEventListener('input', () => this.updateRepeatSummary());
+
+    document.getElementById('jobDuration')?.addEventListener('change', () => this.updateRepeatSummary());
+
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !this.modal.hidden) {
         this.close();
@@ -79,11 +108,11 @@ export class JobModal {
       this.selectedImagePath = filePath;
       const fileName = filePath.split('\\').pop() || filePath.split('/').pop() || 'Selected';
       this.imageText.textContent = fileName;
-      this.showImagePreview(filePath);
+      await this.showImagePreview(filePath);
     }
   }
 
-  static openForEdit(job: any): void {
+  static openForEdit(job: QueueItem): void {
     const modal = new JobModal();
     modal.open(job);
   }
@@ -93,9 +122,9 @@ export class JobModal {
     modal.open();
   }
 
-  open(job?: any): void {
+  open(job?: QueueItem): void {
     this.resetForm();
-    
+
     if (job) {
       this.isEdit = true;
       this.currentJob = job;
@@ -108,10 +137,11 @@ export class JobModal {
       this.titleEl.textContent = 'New Publication';
       this.saveBtn.textContent = 'Add to Queue';
       this.setDefaultDateTime();
+      this.updateRepeatUI();
     }
 
     this.modal.hidden = false;
-    const firstInput = this.form.querySelector('input, select') as HTMLElement;
+    const firstInput = this.form.querySelector('input:not([type="checkbox"]):not([type="radio"]), select') as HTMLElement;
     firstInput?.focus();
   }
 
@@ -129,62 +159,132 @@ export class JobModal {
     this.imagePreview.style.display = 'none';
     this.imagePreview.innerHTML = '';
     document.getElementById('jobAutobuyGroup')!.style.display = 'none';
+    this.repeatGapInput.value = '1';
+    this.repeatCheckbox.checked = false;
+    this.repeatOptions.hidden = true;
+    this.repeatSummary.textContent = '';
   }
 
   private setDefaultDateTime(): void {
     const now = new Date();
-    now.setMinutes(now.getMinutes() + 5); // Default to 5 minutes from now
-    const dateInput = document.getElementById('jobDate') as HTMLInputElement;
-    const timeInput = document.getElementById('jobTime') as HTMLInputElement;
-    dateInput.value = now.toISOString().split('T')[0];
-    timeInput.value = now.toTimeString().slice(0, 5);
+    now.setMinutes(now.getMinutes() + 5);
+    this.writeLocalDateTime(now);
   }
 
-  private populateForm(job: any): void {
-    (document.getElementById('jobCategory') as HTMLSelectElement).value = job.params.category;
-    (document.getElementById('jobSubtitle') as HTMLInputElement).value = job.params.subtitle;
-    (document.getElementById('jobTitle') as HTMLInputElement).value = job.params.title;
-    (document.getElementById('jobDescription') as HTMLTextAreaElement).value = job.params.description;
-    
-    const ratingInput = document.querySelector(`input[name="rating"][value="${job.params.rating}"]`) as HTMLInputElement;
+  private populateForm(job: QueueItem): void {
+    const params = job.params;
+
+    (document.getElementById('jobCategory') as HTMLSelectElement).value = params.category;
+    (document.getElementById('jobSubtitle') as HTMLInputElement).value = params.subtitle;
+    (document.getElementById('jobTitle') as HTMLInputElement).value = params.title;
+    (document.getElementById('jobDescription') as HTMLTextAreaElement).value = params.description;
+
+    const ratingInput = document.querySelector(`input[name="rating"][value="${params.rating}"]`) as HTMLInputElement;
     if (ratingInput) ratingInput.checked = true;
 
-    (document.getElementById('jobNsfw') as HTMLInputElement).checked = job.params.nsfw;
-    (document.getElementById('jobPreventSniping') as HTMLInputElement).checked = job.params.preventSniping;
+    (document.getElementById('jobNsfw') as HTMLInputElement).checked = false;
+    (document.getElementById('jobPreventSniping') as HTMLInputElement).checked = false;
 
-    (document.getElementById('jobDuration') as HTMLSelectElement).value = job.params.duration;
-    (document.getElementById('jobPromoted') as HTMLInputElement).checked = job.params.promoted;
+    (document.getElementById('jobDuration') as HTMLSelectElement).value = params.duration;
+    (document.getElementById('jobPromoted') as HTMLInputElement).checked = params.promoted;
 
-    (document.getElementById('jobStartingBid') as HTMLInputElement).value = job.params.startingBid;
-    (document.getElementById('jobMinIncrease') as HTMLInputElement).value = job.params.minIncrease;
-    (document.getElementById('jobAutobuyEnabled') as HTMLInputElement).checked = job.params.autobuyEnabled;
-    (document.getElementById('jobAutobuy') as HTMLInputElement).value = job.params.autobuy;
-    document.getElementById('jobAutobuyGroup')!.style.display = job.params.autobuyEnabled ? 'block' : 'none';
+    (document.getElementById('jobStartingBid') as HTMLInputElement).value = params.startingBid;
+    (document.getElementById('jobMinIncrease') as HTMLInputElement).value = params.minIncrease;
+    (document.getElementById('jobAutobuyEnabled') as HTMLInputElement).checked = params.autobuyEnabled;
+    (document.getElementById('jobAutobuy') as HTMLInputElement).value = params.autobuy;
+    document.getElementById('jobAutobuyGroup')!.style.display = params.autobuyEnabled ? 'block' : 'none';
 
     const scheduled = new Date(job.scheduledAt);
-    (document.getElementById('jobDate') as HTMLInputElement).value = scheduled.toISOString().split('T')[0];
-    (document.getElementById('jobTime') as HTMLInputElement).value = scheduled.toTimeString().slice(0, 5);
+    if (!Number.isNaN(scheduled.getTime())) {
+      this.writeLocalDateTime(scheduled);
+    }
 
-    // Show existing image if any
-    if (job.params.imagePath) {
-      this.selectedImagePath = job.params.imagePath;
-      const fileName = job.params.imagePath.split('\\').pop() || job.params.imagePath.split('/').pop() || 'Selected';
+    this.repeatCheckbox.checked = job.recurrence?.enabled === true;
+    this.repeatGapInput.value = String(job.recurrence?.gapDays ?? 1);
+    this.updateRepeatUI();
+
+    if (params.imagePath) {
+      this.selectedImagePath = params.imagePath;
+      const fileName = params.imagePath.split('\\').pop() || params.imagePath.split('/').pop() || 'Selected';
       this.imageText.textContent = fileName;
-      this.showImagePreview(job.params.imagePath);
+      void this.showImagePreview(params.imagePath);
     }
   }
 
-  private handleImageChange(): void {
-    const file = this.imageInput.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      this.showImagePreview(url);
+  private async showImagePreview(src: string): Promise<void> {
+    this.imagePreview.style.display = 'flex';
+    this.imagePreview.innerHTML = '<span class="image-preview-loading">Loading preview…</span>';
+
+    try {
+      const dataUrl = await window.api.dialog.readImagePreview(src);
+      if (!dataUrl) {
+        throw new Error('Preview data is empty');
+      }
+
+      const img = document.createElement('img');
+      img.alt = 'Preview';
+      img.src = dataUrl;
+      this.imagePreview.innerHTML = '';
+      this.imagePreview.appendChild(img);
+    } catch (error) {
+      console.error('Failed to load image preview:', error);
+      this.imagePreview.innerHTML = '<span class="image-preview-error">Preview unavailable</span>';
     }
   }
 
-  private showImagePreview(src: string): void {
-    this.imagePreview.innerHTML = `<img src="${src}" alt="Preview">`;
-    this.imagePreview.style.display = 'block';
+  private getScheduledLocalDate(): Date | null {
+    const dateValue = (document.getElementById('jobDate') as HTMLInputElement).value;
+    const timeValue = (document.getElementById('jobTime') as HTMLInputElement).value;
+
+    if (!dateValue || !timeValue) return null;
+
+    const [year, month, day] = dateValue.split('-').map(Number);
+    const [hour, minute] = timeValue.split(':').map(Number);
+    const date = new Date(year, month - 1, day, hour, minute, 0, 0);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private writeLocalDateTime(date: Date): void {
+    const dateInput = document.getElementById('jobDate') as HTMLInputElement;
+    const timeInput = document.getElementById('jobTime') as HTMLInputElement;
+
+    const pad = (value: number) => String(value).padStart(2, '0');
+
+    dateInput.value = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    timeInput.value = `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  private adjustDate(deltaDays: number): void {
+    const scheduled = this.getScheduledLocalDate() ?? new Date();
+    scheduled.setDate(scheduled.getDate() + deltaDays);
+    this.writeLocalDateTime(scheduled);
+  }
+
+  private adjustHour(deltaHours: number): void {
+    const scheduled = this.getScheduledLocalDate() ?? new Date();
+    scheduled.setHours(scheduled.getHours() + deltaHours);
+    this.writeLocalDateTime(scheduled);
+  }
+
+  private updateRepeatUI(): void {
+    this.repeatOptions.hidden = !this.repeatCheckbox.checked;
+    this.updateRepeatSummary();
+  }
+
+  private updateRepeatSummary(): void {
+    if (!this.repeatCheckbox.checked) {
+      this.repeatSummary.textContent = '';
+      return;
+    }
+
+    const duration = (document.getElementById('jobDuration') as HTMLSelectElement).value as AuctionDuration;
+    const gapDays = Math.max(0, Number(this.repeatGapInput.value || 0));
+    const durationDays = DURATION_DAYS[duration] ?? 1;
+    const totalDays = durationDays + gapDays;
+    const durationLabel = DURATION_LABELS[duration] ?? 'duration';
+
+    this.repeatSummary.textContent = `Repeats every ${totalDays} day(s): ${durationLabel} + ${gapDays} day(s) gap.`;
   }
 
   private async save(): Promise<void> {
@@ -194,18 +294,17 @@ export class JobModal {
     this.saveBtn.textContent = this.isEdit ? 'Saving...' : 'Adding...';
 
     try {
-      const { params, scheduledAt } = this.collectFormData();
-      
-      // Copy image to images directory
-      if (params.imagePath) {
-        const imagePath = await queueStore.copyImage(params.imagePath);
-        params.imagePath = imagePath;
+      const { params, scheduledAt, recurrence } = this.collectFormData();
+
+      const imageUnchanged = this.isEdit && this.currentJob?.params.imagePath === params.imagePath;
+      if (params.imagePath && !imageUnchanged) {
+        params.imagePath = await queueStore.copyImage(params.imagePath);
       }
 
-      if (this.isEdit && this.currentJob) {
-        await queueStore.update(this.currentJob.id!, { params, scheduledAt });
+      if (this.isEdit && this.currentJob?.id) {
+        await queueStore.update(this.currentJob.id, { params, scheduledAt, recurrence });
       } else {
-        await queueStore.add({ params, scheduledAt });
+        await queueStore.add({ params, scheduledAt, recurrence });
       }
 
       this.close();
@@ -218,22 +317,26 @@ export class JobModal {
     }
   }
 
-  private collectFormData(): { params: any; scheduledAt: string } {
-    const scheduledAt = new Date(
-      (document.getElementById('jobDate') as HTMLInputElement).value + 'T' +
-      (document.getElementById('jobTime') as HTMLInputElement).value
-    ).toISOString();
+  private collectFormData(): {
+    params: AuctionParams;
+    scheduledAt: string;
+    recurrence: RecurrenceSettings;
+  } {
+    const scheduled = this.getScheduledLocalDate();
+    if (!scheduled) {
+      throw new Error('A valid schedule date and time are required');
+    }
 
-    const params = {
+    const params: AuctionParams = {
       imagePath: this.selectedImagePath,
       category: (document.getElementById('jobCategory') as HTMLSelectElement).value,
       subtitle: (document.getElementById('jobSubtitle') as HTMLInputElement).value,
       title: (document.getElementById('jobTitle') as HTMLInputElement).value,
       description: (document.getElementById('jobDescription') as HTMLTextAreaElement).value,
-      rating: (document.querySelector('input[name="rating"]:checked') as HTMLInputElement).value,
-      nsfw: (document.getElementById('jobNsfw') as HTMLInputElement).checked,
-      preventSniping: (document.getElementById('jobPreventSniping') as HTMLInputElement).checked,
-      duration: (document.getElementById('jobDuration') as HTMLSelectElement).value,
+      rating: (document.querySelector('input[name="rating"]:checked') as HTMLInputElement).value as AuctionParams['rating'],
+      nsfw: false,
+      preventSniping: false,
+      duration: (document.getElementById('jobDuration') as HTMLSelectElement).value as AuctionDuration,
       promoted: (document.getElementById('jobPromoted') as HTMLInputElement).checked,
       startingBid: (document.getElementById('jobStartingBid') as HTMLInputElement).value,
       minIncrease: (document.getElementById('jobMinIncrease') as HTMLInputElement).value,
@@ -241,11 +344,20 @@ export class JobModal {
       autobuy: (document.getElementById('jobAutobuy') as HTMLInputElement).value
     };
 
-    return { params, scheduledAt };
+    const gapDays = Number(this.repeatGapInput.value || 1);
+    const recurrence: RecurrenceSettings = {
+      enabled: this.repeatCheckbox.checked,
+      gapDays: Number.isFinite(gapDays) ? Math.max(0, Math.floor(gapDays)) : 1
+    };
+
+    return {
+      params,
+      scheduledAt: scheduled.toISOString(),
+      recurrence
+    };
   }
 
   private validateForm(): boolean {
-    // Check image
     if (!this.selectedImagePath && !this.currentJob?.params.imagePath) {
       alert('Image is required');
       this.imageBtn.focus();
@@ -281,14 +393,22 @@ export class JobModal {
       }
     }
 
-    const scheduledAt = new Date(
-      (document.getElementById('jobDate') as HTMLInputElement).value + 'T' +
-      (document.getElementById('jobTime') as HTMLInputElement).value
-    );
-    if (scheduledAt <= new Date()) {
+    const scheduled = this.getScheduledLocalDate();
+    if (!scheduled) {
+      alert('A valid schedule date and time are required');
+      return false;
+    }
+
+    if (scheduled <= new Date()) {
       if (!confirm('Scheduled time is in the past. Continue anyway?')) {
         return false;
       }
+    }
+
+    if (!Number.isFinite(Number(this.repeatGapInput.value)) || Number(this.repeatGapInput.value) < 0) {
+      alert('Repeat gap must be 0 or greater');
+      this.repeatGapInput.focus();
+      return false;
     }
 
     return true;
