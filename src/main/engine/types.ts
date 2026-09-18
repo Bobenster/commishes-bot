@@ -1,3 +1,17 @@
+export type AuctionDuration = '24h' | '3d' | '7d';
+
+export const AUCTION_DURATION_OPTIONS: ReadonlyArray<{ value: AuctionDuration; label: string }> = [
+  { value: '24h', label: '24 Hours (Free)' },
+  { value: '3d', label: '3 Days (Free)' },
+  { value: '7d', label: '7 Days (Free)' }
+];
+
+export const AUCTION_DURATION_MS: Record<AuctionDuration, number> = {
+  '24h': 24 * 60 * 60 * 1000,
+  '3d': 3 * 24 * 60 * 60 * 1000,
+  '7d': 7 * 24 * 60 * 60 * 1000
+};
+
 export interface AuctionParams {
   imagePath: string;
   category: string;
@@ -8,11 +22,16 @@ export interface AuctionParams {
   nsfw: boolean;
   preventSniping: boolean;
   promoted: boolean;
-  duration: string;
+  duration: AuctionDuration;
   startingBid: string;
   minIncrease: string;
   autobuyEnabled: boolean;
   autobuy: string;
+}
+
+export interface RecurrenceSettings {
+  enabled: boolean;
+  gapDays: number;
 }
 
 export interface QueueItem {
@@ -25,6 +44,7 @@ export interface QueueItem {
   maxRetries: number;
   createdAt: string;
   updatedAt: string;
+  recurrence?: RecurrenceSettings;
   lastError?: string;
   lastRunAt?: string;
 }
