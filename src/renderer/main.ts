@@ -61,7 +61,6 @@ document.addEventListener('keydown', (e) => {
     historyStore.refresh();
   }
   if (e.key === 'Escape') {
-    jobModal.close();
     logModal.close();
   }
 });
