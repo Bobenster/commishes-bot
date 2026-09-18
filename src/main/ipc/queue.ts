@@ -48,7 +48,7 @@ export function setupQueueIpc(deps: QueueIpcDeps): void {
     logger.info('queue:runNow', { jobId: id, hasParams: !!job.params, paramsKeys: job.params ? Object.keys(job.params) : 'none' });
     
     // Run in background
-    runner.runManual(job, true).catch(err => {
+    runner.runManual(job, 'publish').catch(err => {
       logger.error('Manual run failed:', err);
     });
     
@@ -61,7 +61,7 @@ export function setupQueueIpc(deps: QueueIpcDeps): void {
     
     logger.info('queue:testRun', { jobId: id, hasParams: !!job.params, paramsKeys: job.params ? Object.keys(job.params) : 'none' });
     
-    const result = await runner.runManual(job, true);
+    const result = await runner.runManual(job, 'dry-run');
     return result;
   });
 
