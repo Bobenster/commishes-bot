@@ -303,6 +303,7 @@ body {
 .action-btn.run:hover { background: rgba(0, 212, 170, 0.2); color: var(--accent-primary); }
 .action-btn.delete:hover { background: rgba(239, 83, 80, 0.2); color: var(--accent-danger); }
 .action-btn.edit:hover { background: rgba(100, 181, 246, 0.2); color: var(--accent-info); }
+.action-btn.clone:hover { background: rgba(0, 184, 212, 0.2); color: var(--accent-secondary); }
 
 .action-btn svg {
   width: 16px;
