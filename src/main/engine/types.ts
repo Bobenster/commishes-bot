@@ -71,6 +71,7 @@ export interface HistoryItem {
   auctionUrl?: string;
   stages: StageLog[];
   isDryRun: boolean;
+  publishAttempted?: boolean;
 }
 
 export interface StageLog {
@@ -231,6 +232,17 @@ export const settingsMigrations: Migration<Settings>[] = [
         autoLaunch: settings.app?.autoLaunch ?? DEFAULT_SETTINGS.app.autoLaunch,
         minimizeToTray: settings.app?.minimizeToTray ?? DEFAULT_SETTINGS.app.minimizeToTray,
         notifications: settings.app?.notifications ?? DEFAULT_SETTINGS.app.notifications
+      }
+    })
+  },
+  {
+    version: 4,
+    up: (settings) => ({
+      ...settings,
+      engine: {
+        ...DEFAULT_SETTINGS.engine,
+        ...settings.engine,
+        testMode: false
       }
     })
   }
