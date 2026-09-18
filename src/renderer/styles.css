@@ -571,23 +571,26 @@ body {
 }
 
 .modal-close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-size: 1.5rem;
+  border: 2px solid transparent;
+  color: var(--accent-danger);
+  font-size: 2rem;
+  line-height: 1;
+  font-weight: 700;
   cursor: pointer;
   border-radius: var(--radius-sm);
   transition: var(--transition);
 }
 
 .modal-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+  background: rgba(239, 83, 80, 0.16);
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
 }
 
 .modal-body {
