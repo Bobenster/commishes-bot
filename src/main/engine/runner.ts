@@ -93,6 +93,7 @@ export class Runner extends EventEmitter {
         this.historyManager.append({
           queueItemId: jobId,
           idempotencyKey: job.idempotencyKey,
+          sourceParams: { ...job.params },
           startedAt: job.lastRunAt || new Date().toISOString(),
           finishedAt: new Date().toISOString(),
           success: true,
@@ -123,6 +124,7 @@ export class Runner extends EventEmitter {
       this.historyManager.append({
         queueItemId: jobId,
         idempotencyKey: job.idempotencyKey,
+        sourceParams: { ...job.params },
         startedAt: job.lastRunAt || new Date().toISOString(),
         finishedAt: new Date().toISOString(),
         success: false,
