@@ -66,6 +66,7 @@ interface ElectronAPI {
     openFile: (options: Electron.OpenDialogOptions) => Promise<Electron.OpenDialogReturnValue>;
     saveFile: (options: Electron.SaveDialogOptions) => Promise<Electron.SaveDialogReturnValue>;
     messageBox: (options: Electron.MessageBoxOptions) => Promise<Electron.MessageBoxReturnValue>;
+    readImagePreview: (filePath: string) => Promise<string>;
   };
 }
 
