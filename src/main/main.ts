@@ -1,6 +1,6 @@
 /// <reference path="./electron-augmentation.d.ts" />
 
-import { app, BrowserWindow, ipcMain, dialog, nativeTheme } from 'electron';
+import { app, BrowserWindow, ipcMain, dialog, nativeTheme, Notification } from 'electron';
 import { join } from 'path';
 import { isDev } from './shared/utils.js';
 import { setupIpcHandlers } from './ipc/index.js';
@@ -14,6 +14,7 @@ import { Runner } from './engine/runner.js';
 import { WatchdogManager } from './engine/watchdog.js';
 import { logger } from './shared/logger.js';
 import { setupAutoLaunch, setupNotifications, setupGlobalShortcuts, setupWindowEvents } from './app-features.js';
+import { armProcessGuardian, markCleanShutdown } from './process-guardian.js';
 
 let mainWindow: BrowserWindow | null = null;
 let scheduler: Scheduler;
@@ -164,34 +165,63 @@ async function initializeApp() {
   logger.info('Initialization complete');
 }
 
-app.whenReady().then(async () => {
-  await initializeApp();
-  createWindow();
-  startRendererWatchdogHooks();
-  watchdog.start(5000);
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
   });
-});
+
+  app.whenReady().then(async () => {
+    await initializeApp();
+    armProcessGuardian();
+    createWindow();
+    startRendererWatchdogHooks();
+    watchdog.start(5000);
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
-  // Don't quit on window close - stay in tray
+  // Keep the main process alive until the user explicitly confirms quit.
 });
 
 app.on('before-quit', () => {
   (app as any).isQuitting = true;
+  markCleanShutdown();
   watchdog?.stop();
   scheduler.stop();
-  chromeManager.disconnect();
+  void chromeManager.disconnect();
   logger.info('Application shutting down');
 });
 
-// Handle uncaught exceptions
+// Main-process errors are captured and reported instead of silently disappearing.
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught exception:', error);
+  try {
+    new Notification({
+      title: 'Commishes Watchdog',
+      body: `Main process error captured: ${error instanceof Error ? error.message : String(error)}`,
+      silent: false
+    }).show();
+  } catch {}
 });
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled rejection:', reason);
+  try {
+    new Notification({
+      title: 'Commishes Watchdog',
+      body: `Unhandled operation error: ${reason instanceof Error ? reason.message : String(reason)}`,
+      silent: false
+    }).show();
+  } catch {}
 });
