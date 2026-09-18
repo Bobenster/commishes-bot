@@ -2,7 +2,6 @@
 
 import { app, globalShortcut, Notification, BrowserWindow, dialog } from 'electron';
 import { SettingsManager } from './data/settings-manager.js';
-import { Scheduler } from './engine/scheduler.js';
 import { logger } from './engine/index.js';
 
 export function setupAutoLaunch(settingsManager: SettingsManager): void {
@@ -21,11 +20,8 @@ export function setupAutoLaunch(settingsManager: SettingsManager): void {
     }
   };
 
-  // Initial setup
   const settings = settingsManager.get();
   handleAutoLaunchChange(settings);
-
-  // Listen for changes
   settingsManager.on('changed', handleAutoLaunchChange);
 }
 
@@ -40,7 +36,7 @@ export function setupNotifications(
 
     if (progress.stage === 'completed' && progress.progress === 100) {
       const win = mainWindow();
-      if (win && win.isVisible()) return; // Don't notify if window is visible
+      if (win && win.isVisible()) return;
 
       new Notification({
         title: 'Commishes Control Center',
@@ -90,37 +86,20 @@ export function setupGlobalShortcuts(mainWindow: () => BrowserWindow | null): vo
     });
   };
 
-  // Register when app is ready
   if (app.isReady()) {
     registerShortcuts();
   } else {
     app.on('ready', registerShortcuts);
   }
 
-  // Unregister on quit
   app.on('will-quit', () => {
     globalShortcut.unregisterAll();
   });
 }
 
-export function setupWindowEvents(mainWindow: BrowserWindow, settingsManager: SettingsManager): void {
-  const settings = settingsManager.get();
-
-  if (settings.app?.minimizeToTray) {
-    mainWindow.on('minimize', (e: Electron.Event) => {
-      // Do not call hide() synchronously from the Windows minimize event.
-      // Deferring it avoids the minimize -> hide re-entrancy that can kill
-      // the Electron main process on some Windows/Electron combinations.
-      e.preventDefault();
-
-      setTimeout(() => {
-        if (mainWindow.isDestroyed() || (app as any).isQuitting) return;
-        mainWindow.hide();
-        logger.info('Window minimized to tray');
-      }, 0);
-    });
-  }
-
+export function setupWindowEvents(mainWindow: BrowserWindow, _settingsManager: SettingsManager): void {
+  // Normal Windows minimize now behaves normally. Hiding to the tray is
+  // an explicit UI action via the "Hide to Tray" button.
   mainWindow.on('close', (e: Electron.Event) => {
     if ((app as any).isQuitting) return;
 
