@@ -15,7 +15,10 @@ const config: ForgeConfig = {
         from: '.build/build-info.json',
         to: 'build-info.json'
       },
-      'scripts/process-guardian.ps1'
+      {
+        from: 'scripts/process-guardian.ps1',
+        to: 'process-guardian.ps1'
+      }
     ]
   },
   rebuildConfig: {},
