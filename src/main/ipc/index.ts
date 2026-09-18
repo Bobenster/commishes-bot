@@ -6,12 +6,14 @@ import { setupHistoryIpc } from './history.js';
 import { setupSettingsIpc } from './settings.js';
 import { setupSchedulerIpc } from './scheduler.js';
 import { setupEngineIpc } from './engine.js';
+import { setupWatchdogIpc } from './watchdog.js';
 import { QueueManager } from '../data/queue-manager.js';
 import { HistoryManager } from '../data/history-manager.js';
 import { SettingsManager } from '../data/settings-manager.js';
 import { Scheduler } from '../engine/scheduler.js';
 import { Runner } from '../engine/runner.js';
 import { ChromeManager } from '../engine/chrome-manager.js';
+import { WatchdogManager } from '../engine/watchdog.js';
 import { logger } from '../engine/index.js';
 
 export interface IpcDeps {
@@ -21,6 +23,7 @@ export interface IpcDeps {
   scheduler: Scheduler;
   runner: Runner;
   chromeManager: ChromeManager;
+  watchdog: WatchdogManager;
   mainWindow: () => BrowserWindow | null;
 }
 
@@ -33,6 +36,7 @@ export function setupIpcHandlers(deps: IpcDeps): void {
   setupSettingsIpc(deps);
   setupSchedulerIpc(deps);
   setupEngineIpc(deps);
+  setupWatchdogIpc(deps);
 
   // App-level handlers
   ipcMain.handle('app:getVersion', () => {
