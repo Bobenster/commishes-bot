@@ -186,9 +186,9 @@ export class CommishesEngine {
 
   private async resolveDurationValue(page: Page, duration: AuctionParams['duration']): Promise<string> {
     const expected = {
-      '24h': { label: /24\\s*hours?/i, fallbackValues: ['24'] },
-      '3d': { label: /3\\s*days?/i, fallbackValues: ['72'] },
-      '7d': { label: /7\\s*days?/i, fallbackValues: ['168'] }
+      '24h': { label: /24\s*hours?/i, fallbackValues: ['24'] },
+      '3d': { label: /3\s*days?/i, fallbackValues: ['72'] },
+      '7d': { label: /7\s*days?/i, fallbackValues: ['168'] }
     }[duration];
 
     if (!expected) {
@@ -205,7 +205,7 @@ export class CommishesEngine {
         const container = linkedLabel || element.closest('label') || element.parentElement;
         return {
           value: element.value,
-          text: (container?.textContent || '').replace(/\\s+/g, ' ').trim()
+          text: (container?.textContent || '').replace(/\s+/g, ' ').trim()
         };
       })
     );
