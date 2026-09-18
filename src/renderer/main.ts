@@ -135,4 +135,18 @@ window.api.engine.onProgress((progress) => {
   queueTab.updateJobProgress(progress);
 });
 
+window.api.app.getBuildInfo().then((info) => {
+  const buildEl = document.getElementById('buildInfo');
+  if (!buildEl) return;
+  const commit = info.sourceShort || info.sourceCommit || 'unknown';
+  const buildDate = info.buildAtUtc
+    ? new Date(info.buildAtUtc).toLocaleString()
+    : 'development';
+  buildEl.textContent = `v${info.version} • ${commit} • ${buildDate}`;
+  buildEl.title = `Source commit: ${info.sourceCommit}\\nBuilt: ${buildDate}\\nMode: ${info.mode}`;
+}).catch(() => {
+  const buildEl = document.getElementById('buildInfo');
+  if (buildEl) buildEl.textContent = 'Build: unknown';
+});
+
 console.log('Commishes Control Center initialized');
