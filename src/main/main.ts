@@ -134,7 +134,7 @@ function initializeManagers() {
 
 async function initializeApp() {
   logger.info('Initializing Commishes Control Center...');
-  
+
   initializeManagers();
   setupIpcHandlers({
     queueManager,
@@ -159,8 +159,8 @@ async function initializeApp() {
     logger.info('Scheduler auto-started');
   }
 
-  // Create tray
-  createTray(mainWindow, scheduler, settingsManager);
+  // Create tray. Pass a getter so tray actions always use the current BrowserWindow.
+  createTray(() => mainWindow, scheduler, settingsManager);
 
   logger.info('Initialization complete');
 }
@@ -171,9 +171,11 @@ if (!gotSingleInstanceLock) {
   app.quit();
 } else {
   app.on('second-instance', () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-      mainWindow.focus();
+    const win = mainWindow;
+    if (win && !win.isDestroyed()) {
+      if (win.isMinimized()) win.restore();
+      win.show();
+      win.focus();
     }
   });
 
@@ -185,7 +187,14 @@ if (!gotSingleInstanceLock) {
     watchdog.start(5000);
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+      const win = mainWindow;
+      if (win && !win.isDestroyed()) {
+        if (win.isMinimized()) win.restore();
+        win.show();
+        win.focus();
+      } else {
+        createWindow();
+      }
     });
   });
 }
