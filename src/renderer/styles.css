@@ -851,3 +851,115 @@ body {
     flex-wrap: wrap;
   }
 }
+/* Schedule controls */
+.schedule-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.schedule-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stepper {
+  display: grid;
+  grid-template-columns: auto minmax(140px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.stepper input {
+  min-width: 0;
+}
+
+.step-btn {
+  white-space: nowrap;
+}
+
+.recurrence-box {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+
+.recurrence-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.recurrence-toggle input {
+  width: auto;
+}
+
+.recurrence-options {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-color);
+}
+
+.number-with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.number-with-suffix input {
+  width: 110px;
+  flex: 0 0 auto;
+}
+
+.form-help {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.recurrence-summary {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.image-preview {
+  width: 220px;
+  height: 170px;
+  max-width: 100%;
+  max-height: 170px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.image-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+
+.image-preview-loading,
+.image-preview-error {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.image-preview-error {
+  color: var(--accent-danger);
+}
