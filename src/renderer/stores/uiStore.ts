@@ -3,7 +3,7 @@
 type Listener = (state: UIState) => void;
 
 interface UIState {
-  activeTab: 'queue' | 'history' | 'settings';
+  activeTab: 'queue' | 'history' | 'settings' | 'watchdog';
   queueSearch: string;
   queueStatusFilter: string;
   historySearch: string;
@@ -58,7 +58,7 @@ class UIStore {
     return this.state.schedulerStatus;
   }
 
-  setActiveTab(tab: 'queue' | 'history' | 'settings'): void {
+  setActiveTab(tab: 'queue' | 'history' | 'settings' | 'watchdog'): void {
     this.state.activeTab = tab;
     this.notify();
   }
