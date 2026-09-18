@@ -51,6 +51,11 @@ document.getElementById('refreshBtn')?.addEventListener('click', () => {
   settingsStore.refresh();
 });
 
+// Explicit hide-to-tray action. Normal window minimize stays normal.
+document.getElementById('hideToTrayBtn')?.addEventListener('click', () => {
+  void window.api.app.hideWindow();
+});
+
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.key === 'n') {
