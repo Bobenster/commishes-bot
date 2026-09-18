@@ -64,6 +64,13 @@ interface ElectronAPI {
   };
   app: {
     getVersion: () => Promise<string>;
+    getBuildInfo: () => Promise<{
+      version: string;
+      sourceCommit: string;
+      sourceShort: string;
+      buildAtUtc: string | null;
+      mode: string;
+    }>;
     showWindow: () => Promise<void>;
     hideWindow: () => Promise<void>;
     quit: () => Promise<void>;
