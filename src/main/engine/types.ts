@@ -64,6 +64,7 @@ export interface HistoryItem {
   startedAt: string;
   finishedAt: string;
   success: boolean;
+  sourceParams?: AuctionParams;
   error?: string;
   auctionUrl?: string;
   stages: StageLog[];
