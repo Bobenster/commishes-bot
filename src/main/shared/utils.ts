@@ -1,6 +1,7 @@
 import { app } from 'electron';
 import { join } from 'path';
 
+// Small GitHub agent edit test.
 export function isDev(): boolean {
   return process.env.NODE_ENV === 'development' || !app.isPackaged;
 }
