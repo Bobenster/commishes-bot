@@ -11,6 +11,7 @@ import { HistoryManager } from './data/history-manager.js';
 import { SettingsManager } from './data/settings-manager.js';
 import { ChromeManager } from './engine/chrome-manager.js';
 import { Runner } from './engine/runner.js';
+import { WatchdogManager } from './engine/watchdog.js';
 import { logger } from './shared/logger.js';
 import { setupAutoLaunch, setupNotifications, setupGlobalShortcuts, setupWindowEvents } from './app-features.js';
 
@@ -21,6 +22,7 @@ let historyManager: HistoryManager;
 let settingsManager: SettingsManager;
 let chromeManager: ChromeManager;
 let runner: Runner;
+let watchdog: WatchdogManager;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -50,11 +52,19 @@ function createWindow() {
     mainWindow?.show();
   });
 
-  mainWindow.on('close', (e) => {
-    if (!(app as any).isQuitting) {
-      e.preventDefault();
-      mainWindow?.hide();
-    }
+  mainWindow.webContents.on('render-process-gone', (_event, details) => {
+    logger.error('Renderer process gone:', details);
+    setTimeout(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        createWindow();
+      } else {
+        mainWindow.webContents.reload();
+      }
+    }, 100);
+  });
+
+  mainWindow.webContents.on('unresponsive', () => {
+    logger.warn('Renderer became unresponsive; watchdog will recover it.');
   });
 
   mainWindow.on('closed', () => {
@@ -65,6 +75,32 @@ function createWindow() {
   setupWindowEvents(mainWindow, settingsManager);
 }
 
+function startRendererWatchdogHooks(): void {
+  watchdog.setRendererHooks(
+    async () => {
+      if (!mainWindow || mainWindow.isDestroyed() || mainWindow.webContents.isDestroyed()) {
+        return false;
+      }
+
+      return Promise.race([
+        mainWindow.webContents.executeJavaScript('1 + 1').then(result => result === 2),
+        new Promise<boolean>(resolve => setTimeout(() => resolve(false), 2500))
+      ]);
+    },
+    async () => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        createWindow();
+        return;
+      }
+
+      if (!mainWindow.webContents.isDestroyed()) {
+        mainWindow.webContents.reload();
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+  );
+}
+
 function initializeManagers() {
   queueManager = new QueueManager();
   historyManager = new HistoryManager();
@@ -72,6 +108,7 @@ function initializeManagers() {
   chromeManager = new ChromeManager(settingsManager);
   runner = new Runner(queueManager, historyManager, settingsManager, chromeManager);
   scheduler = new Scheduler(queueManager, runner, settingsManager);
+  watchdog = new WatchdogManager(queueManager, historyManager, settingsManager, scheduler, runner, chromeManager);
 
   // Wire up events for IPC push
   queueManager.on('changed', () => {
@@ -105,6 +142,7 @@ async function initializeApp() {
     scheduler,
     runner,
     chromeManager,
+    watchdog,
     mainWindow: () => mainWindow
   });
 
@@ -129,6 +167,8 @@ async function initializeApp() {
 app.whenReady().then(async () => {
   await initializeApp();
   createWindow();
+  startRendererWatchdogHooks();
+  watchdog.start(5000);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -141,6 +181,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   (app as any).isQuitting = true;
+  watchdog?.stop();
   scheduler.stop();
   chromeManager.disconnect();
   logger.info('Application shutting down');
