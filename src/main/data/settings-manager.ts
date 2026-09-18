@@ -1,10 +1,11 @@
 import { EventEmitter } from 'events';
-import { createStorage, schemaStorage } from './storage.js';
-import { runMigrations, settingsMigrations } from './migrations.js';
+import { createStorage } from './storage.js';
+import { runMigrations, settingsMigrations, SETTINGS_SCHEMA_VERSION } from './migrations.js';
 import { Settings, DEFAULT_SETTINGS } from '../engine/types.js';
 import { logger } from '../shared/logger.js';
 
 const settingsStorage = createStorage<Settings>('settings.json', DEFAULT_SETTINGS);
+const settingsSchemaStorage = createStorage<{ version: number }>('settings-schema-version.json', { version: 0 });
 
 export class SettingsManager extends EventEmitter {
   private settings!: Settings;
@@ -15,9 +16,10 @@ export class SettingsManager extends EventEmitter {
   }
 
   private load(): void {
-    const schema = schemaStorage.load();
+    // Settings need their own schema version because QueueManager updates the shared schema first.
+    const settingsSchema = settingsSchemaStorage.load();
     this.settings = settingsStorage.load();
-    this.settings = runMigrations(this.settings, settingsMigrations, schema.version);
+    this.settings = runMigrations(this.settings, settingsMigrations, settingsSchema.version);
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...this.settings,
@@ -27,6 +29,7 @@ export class SettingsManager extends EventEmitter {
       app: { ...DEFAULT_SETTINGS.app, ...this.settings.app }
     };
     this.persist();
+    settingsSchemaStorage.save({ version: SETTINGS_SCHEMA_VERSION });
     this.emit('changed');
   }
 

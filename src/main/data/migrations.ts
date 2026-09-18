@@ -2,6 +2,7 @@ import { AuctionDuration, AuctionParams, QueueItem, Settings, DEFAULT_SETTINGS }
 import { logger } from '../shared/logger.js';
 
 export const SCHEMA_VERSION = 4;
+export const SETTINGS_SCHEMA_VERSION = 4;
 
 export interface Migration<T> {
   version: number;
