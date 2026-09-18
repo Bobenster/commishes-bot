@@ -29,6 +29,8 @@ const DURATION_DAYS: Record<AuctionDuration, number> = {
 };
 
 export class JobModal {
+  private static instance: JobModal | null = null;
+
   private modal: HTMLElement;
   private form: HTMLFormElement;
   private titleEl: HTMLElement;
@@ -44,6 +46,13 @@ export class JobModal {
   private selectedImagePath = '';
   private currentJob: JobData | null = null;
   private isEdit = false;
+
+  static getInstance(): JobModal {
+    if (!JobModal.instance) {
+      JobModal.instance = new JobModal();
+    }
+    return JobModal.instance;
+  }
 
   constructor() {
     this.modal = document.getElementById('jobModal')!;
@@ -106,18 +115,15 @@ export class JobModal {
   }
 
   static openForEdit(job: QueueItem): void {
-    const modal = new JobModal();
-    modal.open(job);
+    JobModal.getInstance().open(job);
   }
 
   static openForNew(): void {
-    const modal = new JobModal();
-    modal.open();
+    JobModal.getInstance().open();
   }
 
   static openForClone(source: CloneSource): void {
-    const modal = new JobModal();
-    modal.openClone(source);
+    JobModal.getInstance().openClone(source);
   }
 
   open(job?: QueueItem): void {
