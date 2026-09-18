@@ -1,0 +1,9 @@
+[38224:0919/025518.581:ERROR:cache_util_win.cc(20)] Unable to move the cache: Отказано в доступе. (0x5)
+[38224:0919/025518.581:ERROR:cache_util_win.cc(20)] Unable to move the cache: Отказано в доступе. (0x5)
+[38224:0919/025518.581:ERROR:cache_util_win.cc(20)] Unable to move the cache: Отказано в доступе. (0x5)
+[38224:0919/025518.588:ERROR:disk_cache.cc(208)] Unable to create cache
+[38224:0919/025518.589:ERROR:gpu_disk_cache.cc(711)] Gpu Cache Creation failed: -2
+[38224:0919/025518.590:ERROR:disk_cache.cc(208)] Unable to create cache
+[38224:0919/025518.590:ERROR:gpu_disk_cache.cc(711)] Gpu Cache Creation failed: -2
+[38224:0919/025518.591:ERROR:disk_cache.cc(208)] Unable to create cache
+[38224:0919/025518.591:ERROR:gpu_disk_cache.cc(711)] Gpu Cache Creation failed: -2

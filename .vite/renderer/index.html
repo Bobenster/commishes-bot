@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commishes Control Center</title>
+  <script type="module" crossorigin src="./assets/index-C9xxTD7-.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-DLigMJkI.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+          <span>Commishes Control Center</span>
+        </div>
+        <div class="chrome-status" id="chromeStatus">
+          <span class="status-dot"></span>
+          <span>Chrome: Unknown</span>
+        </div>
+        <div class="test-mode-badge" id="testModeBadge" style="display: none;">🧪 TEST MODE</div>
+      </div>
+      <div class="header-right">
+        <button class="btn btn-secondary" id="refreshBtn" title="Refresh (F5)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6"/>
+            <path d="M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </button>
+        <button class="btn btn-primary" id="addJobBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span>New Publication</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="queue" aria-selected="true">Queue</button>
+      <button class="tab" role="tab" data-tab="history" aria-selected="false">History</button>
+      <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+
+    <!-- Tab Panels -->
+    <main class="main">
+      <!-- Queue Tab -->
+      <section class="tab-panel" id="queuePanel" role="tabpanel" aria-labelledby="queueTab">
+        <div class="panel-header">
+          <h2>Publication Queue</h2>
+          <div class="panel-actions">
+            <input type="text" class="search-input" id="queueSearch" placeholder="Search...">
+            <select class="status-filter" id="queueStatusFilter">
+              <option value="">All Statuses</option>
+              <option value="waiting">⏳ Waiting</option>
+              <option value="running">🔄 Running</option>
+              <option value="paused">⏸ Paused</option>
+              <option value="retrying">🔁 Retrying</option>
+              <option value="completed">✅ Completed</option>
+              <option value="failed">❌ Failed</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="data-table" id="queueTable">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Scheduled Time</th>
+                <th>Title</th>
+                <th style="width: 120px;">Category</th>
+                <th style="width: 120px;">Status</th>
+                <th style="width: 200px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="queueTableBody">
+              <!-- Rows inserted here -->
+            </tbody>
+          </table>
+          <div class="empty-state" id="queueEmpty" style="display: none;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+            <p>No publications in queue</p>
+            <button class="btn btn-primary" id="emptyAddBtn">Add First Publication</button>
+          </div>
+        </div>
+        <div class="panel-footer">
+          <span id="queueCount">0 items</span>
+        </div>
+      </section>
+
+      <!-- History Tab -->
+      <section class="tab-panel" id="historyPanel" role="tabpanel" aria-labelledby="historyTab" hidden>
+        <div class="panel-header">
+          <h2>Execution History</h2>
+          <div class="panel-actions">
+            <input type="text" class="search-input" id="historySearch" placeholder="Search...">
+            <select class="status-filter" id="historyStatusFilter">
+              <option value="">All</option>
+              <option value="success">✅ Success</option>
+              <option value="failed">❌ Failed</option>
+            </select>
+            <input type="date" class="date-filter" id="historyDateFrom" title="From">
+            <input type="date" class="date-filter" id="historyDateTo" title="To">
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="data-table" id="historyTable">
+            <thead>
+              <tr>
+                <th style="width: 160px;">Date & Time</th>
+                <th>Title</th>
+                <th style="width: 100px;">Status</th>
+                <th style="width: 100px;">Duration</th>
+                <th style="width: 140px;">Auction</th>
+                <th style="width: 80px;">Details</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <!-- Rows inserted here -->
+            </tbody>
+          </table>
+          <div class="empty-state" id="historyEmpty" style="display: none;">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 6v6l4 2"/>
+            </svg>
+            <p>No history yet</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Settings Tab -->
+      <section class="tab-panel" id="settingsPanel" role="tabpanel" aria-labelledby="settingsTab" hidden>
+        <div class="settings-container">
+          <div class="settings-section">
+            <h3>Chrome</h3>
+            <div class="setting-row">
+              <label>Chrome Executable</label>
+              <div class="path-input">
+                <input type="text" id="settingChromePath" readonly>
+                <button class="btn btn-secondary btn-small" id="browseChromePath">Browse</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label>Profile Directory</label>
+              <div class="path-input">
+                <input type="text" id="settingProfilePath" readonly>
+                <button class="btn btn-secondary btn-small" id="browseProfilePath">Browse</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <label>Debug Port</label>
+              <input type="number" id="settingDebugPort" min="9222" max="9999">
+            </div>
+            <div class="setting-row">
+              <button class="btn btn-secondary" id="checkChromeBtn">Check Chrome Connection</button>
+              <span id="chromeCheckResult"></span>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Scheduler</h3>
+            <div class="setting-row">
+              <label>Check Interval (ms)</label>
+              <input type="number" id="settingInterval" min="1000" max="300000" step="1000">
+            </div>
+            <div class="setting-row">
+              <label>Cooldown Between Jobs (ms)</label>
+              <input type="number" id="settingCooldown" min="0" max="3600000" step="1000">
+            </div>
+            <div class="setting-row">
+              <label>Max Retries</label>
+              <input type="number" id="settingMaxRetries" min="0" max="10">
+            </div>
+            <div class="setting-row">
+              <label>
+                <input type="checkbox" id="settingAutoStart">
+                Auto-start scheduler on app launch
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Engine</h3>
+            <div class="setting-row">
+              <label>
+                <input type="checkbox" id="settingTestMode">
+                Test Mode (Dry Run only - stops before publishing)
+              </label>
+            </div>
+            <div class="setting-row">
+              <label>Images Directory</label>
+              <div class="path-input">
+                <input type="text" id="settingImagesDir" readonly>
+                <button class="btn btn-secondary btn-small" id="browseImagesDir">Browse</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Application</h3>
+            <div class="setting-row">
+              <label>
+                <input type="checkbox" id="settingAutoLaunch">
+                Start on Windows login
+              </label>
+            </div>
+            <div class="setting-row">
+              <label>
+                <input type="checkbox" id="settingMinimizeToTray">
+                Minimize to tray on close
+              </label>
+            </div>
+            <div class="setting-row">
+              <label>
+                <input type="checkbox" id="settingNotifications">
+                Show notifications
+              </label>
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <h3>Data Management</h3>
+            <div class="setting-row">
+              <button class="btn btn-secondary" id="exportQueueBtn">Export Queue</button>
+              <button class="btn btn-secondary" id="importQueueBtn">Import Queue</button>
+            </div>
+            <div class="setting-row">
+              <button class="btn btn-secondary" id="exportHistoryBtn">Export History</button>
+              <button class="btn btn-secondary" id="exportSettingsBtn">Export Settings</button>
+            </div>
+            <div class="setting-row">
+              <button class="btn btn-danger" id="resetSettingsBtn">Reset All Settings</button>
+            </div>
+          </div>
+
+          <div class="settings-actions">
+            <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <div class="modal-overlay" id="jobModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="jobModalTitle">
+      <div class="modal-header">
+        <h3 id="jobModalTitle">New Publication</h3>
+        <button class="modal-close" id="jobModalClose" aria-label="Close">&times;</button>
+      </div>
+      <form class="modal-body" id="jobForm">
+        <div class="form-section">
+          <h4>Image</h4>
+          <div class="form-group">
+            <label>Image File</label>
+            <div class="file-input-wrapper">
+              <button type="button" class="btn btn-secondary" id="jobImageBtn">Select Image...</button>
+              <span class="file-input-text" id="jobImageText">No file selected</span>
+            </div>
+            <div class="image-preview" id="imagePreview" style="display: none;"></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Page 1 - Create Auction</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Category *</label>
+              <select id="jobCategory" required>
+                <option value="furry">Furry</option>
+                <option value="human">Human</option>
+                <option value="feral">Feral</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Subtitle *</label>
+              <input type="text" id="jobSubtitle" maxlength="100" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Title *</label>
+            <input type="text" id="jobTitle" maxlength="100" required>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="jobDescription" rows="4"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Rating *</label>
+              <div class="radio-group">
+                <label><input type="radio" name="rating" value="0" checked> Safe</label>
+                <label><input type="radio" name="rating" value="1"> Questionable</label>
+                <label><input type="radio" name="rating" value="2"> Explicit</label>
+                <label><input type="radio" name="rating" value="3"> Shock</label>
+              </div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group checkbox-group">
+              <label><input type="checkbox" id="jobNsfw"> NSFW</label>
+              <label><input type="checkbox" id="jobPreventSniping"> Prevent Sniping</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Page 2 - Start Auction</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Duration *</label>
+              <select id="jobDuration" required>
+                <option value="1">1 Hour</option>
+                <option value="3">3 Hours</option>
+                <option value="6">6 Hours</option>
+                <option value="12">12 Hours</option>
+                <option value="24" selected>24 Hours</option>
+                <option value="48">48 Hours</option>
+                <option value="72">72 Hours</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="jobPromoted"> Promoted
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Page 3 - Ready</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Starting Bid *</label>
+              <input type="number" id="jobStartingBid" step="0.01" min="0.01" required>
+            </div>
+            <div class="form-group">
+              <label>Min Increase *</label>
+              <input type="number" id="jobMinIncrease" step="0.01" min="0.01" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="jobAutobuyEnabled"> Autobuy
+              </label>
+            </div>
+            <div class="form-group" id="jobAutobuyGroup" style="display: none;">
+              <label>Autobuy Amount</label>
+              <input type="number" id="jobAutobuy" step="0.01" min="0.01">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h4>Schedule</h4>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Date *</label>
+              <input type="date" id="jobDate" required>
+            </div>
+            <div class="form-group">
+              <label>Time *</label>
+              <input type="time" id="jobTime" required>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="jobModalCancel">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="jobModalSave">Add to Queue</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Log Viewer Modal -->
+  <div class="modal-overlay" id="logModal" hidden>
+    <div class="modal modal-large" role="dialog" aria-modal="true" aria-labelledby="logModalTitle">
+      <div class="modal-header">
+        <h3 id="logModalTitle">Execution Log</h3>
+        <button class="modal-close" id="logModalClose" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="log-header">
+          <span id="logJobTitle"></span>
+          <span class="log-status" id="logStatus"></span>
+        </div>
+        <div class="log-stages" id="logStages"></div>
+        <div class="log-error" id="logError" style="display: none;">
+          <h4>Error</h4>
+          <pre id="logErrorText"></pre>
+        </div>
+        <div class="log-screenshots" id="logScreenshots" style="display: none;">
+          <h4>Screenshots</h4>
+          <div class="screenshot-grid" id="screenshotGrid"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="logModalClose2">Close</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

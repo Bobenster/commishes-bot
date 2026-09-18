@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@main/*": ["src/main/*"],
+      "@renderer/*": ["src/renderer/*"],
+      "@engine/*": ["src/main/engine/*"],
+      "@shared/*": ["src/main/shared/*"],
+      "@data/*": ["src/main/data/*"]
+    },
+    "types": ["node", "electron"]
+  },
+  "include": [
+    "global.d.ts",
+    "src/main/electron-augmentation.d.ts",
+    "src/**/*",
+    "forge.config.ts",
+    "vite.*.config.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
