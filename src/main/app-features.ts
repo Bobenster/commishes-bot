@@ -65,6 +65,7 @@ export function setupGlobalShortcuts(mainWindow: () => BrowserWindow | null): vo
     globalShortcut.register('CommandOrControl+N', () => {
       const win = mainWindow();
       if (win) {
+        if (win.isMinimized()) win.restore();
         win.show();
         win.focus();
         win.webContents.send('shortcut:newJob');
@@ -81,6 +82,7 @@ export function setupGlobalShortcuts(mainWindow: () => BrowserWindow | null): vo
     globalShortcut.register('CommandOrControl+Shift+S', () => {
       const win = mainWindow();
       if (win) {
+        if (win.isMinimized()) win.restore();
         win.show();
         win.focus();
         win.webContents.send('shortcut:openSettings');
@@ -106,8 +108,16 @@ export function setupWindowEvents(mainWindow: BrowserWindow, settingsManager: Se
 
   if (settings.app?.minimizeToTray) {
     mainWindow.on('minimize', (e: Electron.Event) => {
+      // Do not call hide() synchronously from the Windows minimize event.
+      // Deferring it avoids the minimize -> hide re-entrancy that can kill
+      // the Electron main process on some Windows/Electron combinations.
       e.preventDefault();
-      mainWindow.hide();
+
+      setTimeout(() => {
+        if (mainWindow.isDestroyed() || (app as any).isQuitting) return;
+        mainWindow.hide();
+        logger.info('Window minimized to tray');
+      }, 0);
     });
   }
 
