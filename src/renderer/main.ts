@@ -15,7 +15,7 @@ import { uiStore } from './stores/uiStore.js';
 const queueTab = new QueueTab();
 const historyTab = new HistoryTab();
 const settingsTab = new SettingsTab();
-const jobModal = new JobModal();
+const jobModal = JobModal.getInstance();
 const logModal = new LogModal();
 
 // Tab navigation
