@@ -1,5 +1,4 @@
-import { Page, BrowserContext } from 'playwright';
-import * as fs from 'fs';
+import { Page } from 'playwright';
 import { AuctionParams, DryRunResult, StageLog, BotChromeSession, logger, createJobLogger, saveErrorScreenshot, SELECTORS, URLS } from './index.js';
 
 export class CommishesEngine {
@@ -19,6 +18,9 @@ export class CommishesEngine {
     const page = session.page;
 
     try {
+      // Match the reference workflow: operate on the active Commishes tab.
+      await page.bringToFront();
+
       // Ensure we're on the create page
       await this.ensureCreatePage(page);
       await this.checkForChallenge(page);
@@ -171,10 +173,57 @@ export class CommishesEngine {
     addStage('set_promoted', true, 0, { promoted: params.promoted });
 
     // Duration
-    const duration = page.locator(SELECTORS.start.duration(params.duration));
-    if (!(await duration.count())) throw new Error(`Duration option not found: ${params.duration}`);
+    // The UI stores a semantic duration (24h / 3d / 7d). Resolve it against
+    // the actual radio options on Commishes so we never invent site values.
+    const durationValue = await this.resolveDurationValue(page, params.duration);
+    const duration = page.locator(SELECTORS.start.duration(durationValue));
     await duration.check();
-    addStage('set_duration', true, 0, { duration: params.duration });
+    addStage('set_duration', true, 0, {
+      duration: params.duration,
+      siteValue: durationValue
+    });
+  }
+
+  private async resolveDurationValue(page: Page, duration: AuctionParams['duration']): Promise<string> {
+    const expected = {
+      '24h': { label: /24\\s*hours?/i, fallbackValues: ['24'] },
+      '3d': { label: /3\\s*days?/i, fallbackValues: ['72'] },
+      '7d': { label: /7\\s*days?/i, fallbackValues: ['168'] }
+    }[duration];
+
+    if (!expected) {
+      throw new Error(`Unsupported duration: ${duration}`);
+    }
+
+    const options = await page.locator(SELECTORS.start.durationInputs).evaluateAll((inputs) =>
+      inputs.map((input) => {
+        const element = input as HTMLInputElement;
+        const id = element.id;
+        const linkedLabel = id
+          ? document.querySelector(`label[for="${CSS.escape(id)}"]`)
+          : null;
+        const container = linkedLabel || element.closest('label') || element.parentElement;
+        return {
+          value: element.value,
+          text: (container?.textContent || '').replace(/\\s+/g, ' ').trim()
+        };
+      })
+    );
+
+    const byLabel = options.find(option => expected.label.test(option.text));
+    if (byLabel) {
+      return byLabel.value;
+    }
+
+    const byFallback = options.find(option => expected.fallbackValues.includes(option.value));
+    if (byFallback) {
+      return byFallback.value;
+    }
+
+    const available = options.map(option => `${option.value}:${option.text || 'unlabeled'}`).join(', ');
+    throw new Error(
+      `Duration option "${duration}" was not found on Commishes. Available options: ${available || 'none'}`
+    );
   }
 
   private async submitPage2(page: Page): Promise<void> {
