@@ -4,7 +4,7 @@ import { join } from 'path';
 import * as fs from 'fs';
 import { createStorage, ensureDataFiles } from './storage.js';
 import { normalizeQueueItem, normalizeQueueItems, runMigrations, queueMigrations, SCHEMA_VERSION } from './migrations.js';
-import { QueueItem, AuctionParams, JobStatus, logger } from '../engine/index.js';
+import { QueueItem, JobStatus, logger } from '../engine/index.js';
 import { getAppDataPath } from '../shared/utils.js';
 
 const IMAGES_DIR = join(getAppDataPath(), 'images');
@@ -64,12 +64,14 @@ export class QueueManager extends EventEmitter {
     return this.queue.find(item => item.id === id);
   }
 
-  add(params: Pick<QueueItem, 'params' | 'scheduledAt'>): QueueItem {
+  add(input: Pick<QueueItem, 'params' | 'scheduledAt'>): QueueItem {
     const now = new Date().toISOString();
     const id = uuidv4();
-    const item: QueueItem = {
-      params,
-      scheduledAt: params.scheduledAt,
+
+    // Keep the QueueItem contract exactly as { params, scheduledAt, ... }.
+    // This also normalizes any missing optional form values before storage.
+    const item = normalizeQueueItem({
+      ...input,
       id,
       idempotencyKey: uuidv4(),
       status: 'waiting',
@@ -77,11 +79,7 @@ export class QueueManager extends EventEmitter {
       maxRetries: 2,
       createdAt: now,
       updatedAt: now
-    };
-
-    // The public input shape is { params, scheduledAt }; keep that shape
-    // internally so every QueueItem has the same contract.
-    item.params = normalizeQueueItem(item).params;
+    } as QueueItem);
 
     this.queue.push(item);
     this.persist();
