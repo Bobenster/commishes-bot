@@ -14,6 +14,7 @@ export class QueueTab {
   private unsubscribeQueue: (() => void) | null = null;
   private unsubscribeUI: (() => void) | null = null;
   private dragSrc: HTMLElement | null = null;
+  private countdownTimer: number | null = null;
 
   constructor() {
     this.tbody = document.getElementById('queueTableBody') as HTMLTableSectionElement;
@@ -24,6 +25,7 @@ export class QueueTab {
 
     this.bindEvents();
     this.subscribe();
+    this.countdownTimer = window.setInterval(() => this.updateCountdowns(), 1000);
   }
 
   private bindEvents(): void {
@@ -44,6 +46,10 @@ export class QueueTab {
   destroy(): void {
     this.unsubscribeQueue?.();
     this.unsubscribeUI?.();
+    if (this.countdownTimer !== null) {
+      window.clearInterval(this.countdownTimer);
+      this.countdownTimer = null;
+    }
   }
 
   render(): void {
@@ -109,7 +115,10 @@ export class QueueTab {
     const isRunning = item.status === 'running';
 
     return `
-      <td>${scheduledTime}</td>
+      <td>
+        <div>${scheduledTime}</div>
+        <small class="schedule-countdown" data-scheduled-at="${this.escapeHtml(item.scheduledAt)}">${this.formatCountdown(item.scheduledAt)}</small>
+      </td>
       <td>
         <strong>${this.escapeHtml(item.params.title)}</strong>
         ${item.params.subtitle ? `<br><small style="color: var(--text-muted)">${this.escapeHtml(item.params.subtitle)}</small>` : ''}
@@ -264,6 +273,42 @@ export class QueueTab {
         queueStore.reorder(newIds);
       }
     });
+  }
+
+  private updateCountdowns(): void {
+    const countdowns = this.tbody.querySelectorAll<HTMLElement>('.schedule-countdown[data-scheduled-at]');
+    countdowns.forEach(el => {
+      const scheduledAt = el.dataset.scheduledAt;
+      if (scheduledAt) {
+        el.textContent = this.formatCountdown(scheduledAt);
+      }
+    });
+  }
+
+  private formatCountdown(scheduledAt: string): string {
+    const target = new Date(scheduledAt).getTime();
+    if (!Number.isFinite(target)) return 'Invalid schedule';
+
+    const diff = target - Date.now();
+    const totalSeconds = Math.floor(Math.abs(diff) / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const clock = [hours, minutes, seconds]
+      .map(value => String(value).padStart(2, '0'))
+      .join(':');
+
+    if (diff > 0) {
+      return days > 0 ? `in ${days}d ${clock}` : `in ${clock}`;
+    }
+
+    if (totalSeconds === 0) {
+      return 'Due now';
+    }
+
+    return days > 0 ? `overdue ${days}d ${clock}` : `overdue ${clock}`;
   }
 
   updateJobProgress(progress: any): void {
