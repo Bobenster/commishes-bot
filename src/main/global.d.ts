@@ -68,6 +68,7 @@ interface ElectronAPI {
       version: string;
       sourceCommit: string;
       sourceShort: string;
+      sourceDirty: boolean;
       buildAtUtc: string | null;
       mode: string;
     }>;
