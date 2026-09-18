@@ -6,8 +6,10 @@ import { Scheduler } from './engine/scheduler.js';
 import { logger } from './engine/index.js';
 
 export function setupAutoLaunch(settingsManager: SettingsManager): void {
-  const handleAutoLaunchChange = (settings: any) => {
-    const autoLaunch = settings.app?.autoLaunch;
+  const handleAutoLaunchChange = (settings?: any) => {
+    // Be defensive: older callers emitted "changed" without a payload.
+    const currentSettings = settings ?? settingsManager.get();
+    const autoLaunch = currentSettings.app?.autoLaunch;
     if (autoLaunch) {
       app.setLoginItemSettings({
         openAtLogin: true,
