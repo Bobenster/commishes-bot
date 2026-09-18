@@ -10,6 +10,7 @@ import { queueStore } from './stores/queueStore.js';
 import { historyStore } from './stores/historyStore.js';
 import { settingsStore } from './stores/settingsStore.js';
 import { uiStore } from './stores/uiStore.js';
+import { WatchdogTab } from './components/WatchdogTab.js';
 
 // Initialize tabs
 const queueTab = new QueueTab();
@@ -21,8 +22,9 @@ const logModal = new LogModal();
 // Tab navigation
 const tabs = document.querySelectorAll<HTMLButtonElement>('.tab');
 const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+const watchdogPanelController = new WatchdogTab();
 
-function switchTab(tabName: 'queue' | 'history' | 'settings') {
+function switchTab(tabName: 'queue' | 'history' | 'settings' | 'watchdog') {
   tabs.forEach(tab => {
     const isActive = tab.dataset.tab === tabName;
     tab.setAttribute('aria-selected', String(isActive));
@@ -35,7 +37,7 @@ function switchTab(tabName: 'queue' | 'history' | 'settings') {
 
 tabs.forEach(tab => {
   tab.addEventListener('click', () => {
-    const tabName = tab.dataset.tab as 'queue' | 'history' | 'settings';
+    const tabName = tab.dataset.tab as 'queue' | 'history' | 'settings' | 'watchdog';
     if (tabName) switchTab(tabName);
   });
 });
@@ -63,6 +65,17 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     logModal.close();
   }
+});
+
+window.addEventListener('error', (event) => {
+  const message = event.error instanceof Error ? event.error.message : event.message;
+  void window.api.watchdog.reportRendererError(message || 'Unknown renderer error');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason;
+  const message = reason instanceof Error ? reason.message : String(reason);
+  void window.api.watchdog.reportRendererError(message);
 });
 
 // Initialize stores
