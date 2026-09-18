@@ -49,10 +49,21 @@ class QueueStore {
     }
   }
 
-  // Optimistic updates
+  // The main process emits queue:changed as part of queue:add().
+  // By the time invoke() resolves, the same item is often already present
+  // in this store. Reconcile by id instead of blindly appending it.
   async add(params: any): Promise<QueueItem> {
     const item = await window.api.queue.add(params);
-    this.queue = [...this.queue, item].sort(this.sortFn);
+    const existingIndex = this.queue.findIndex(q => q.id === item.id);
+
+    if (existingIndex === -1) {
+      this.queue = [...this.queue, item].sort(this.sortFn);
+    } else {
+      const next = [...this.queue];
+      next[existingIndex] = item;
+      this.queue = next.sort(this.sortFn);
+    }
+
     this.notify();
     return item;
   }
