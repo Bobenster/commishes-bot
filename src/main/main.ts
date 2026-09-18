@@ -178,8 +178,8 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
-    await initializeApp();
     armProcessGuardian();
+    await initializeApp();
     createWindow();
     startRendererWatchdogHooks();
     watchdog.start(5000);
