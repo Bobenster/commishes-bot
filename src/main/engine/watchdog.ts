@@ -220,7 +220,7 @@ export class WatchdogManager extends EventEmitter {
     const settings = this.settingsManager.get();
     const status = this.scheduler.getStatus();
 
-    if (settings.scheduler.autoStart && !status.running) {
+    if (this.scheduler.shouldBeRunning() && !status.running) {
       try {
         this.setRecovering('scheduler', 'Scheduler stopped unexpectedly; restarting', checkedAt);
         this.scheduler.start(settings.scheduler.intervalMs || 5000);
