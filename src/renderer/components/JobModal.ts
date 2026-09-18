@@ -27,7 +27,6 @@ export class JobModal {
   private form: HTMLFormElement;
   private titleEl: HTMLElement;
   private closeBtn: HTMLElement;
-  private cancelBtn: HTMLButtonElement;
   private saveBtn: HTMLButtonElement;
   private imageBtn: HTMLButtonElement;
   private imageText: HTMLElement;
@@ -45,7 +44,6 @@ export class JobModal {
     this.form = document.getElementById('jobForm') as HTMLFormElement;
     this.titleEl = document.getElementById('jobModalTitle')!;
     this.closeBtn = document.getElementById('jobModalClose')!;
-    this.cancelBtn = document.getElementById('jobModalCancel') as HTMLButtonElement;
     this.saveBtn = document.getElementById('jobModalSave') as HTMLButtonElement;
     this.imageBtn = document.getElementById('jobImageBtn') as HTMLButtonElement;
     this.imageText = document.getElementById('jobImageText')!;
@@ -60,12 +58,6 @@ export class JobModal {
 
   private bindEvents(): void {
     this.closeBtn.addEventListener('click', () => this.close());
-    this.cancelBtn.addEventListener('click', () => this.close());
-
-    this.modal.addEventListener('click', (e) => {
-      if (e.target === this.modal) this.close();
-    });
-
     this.form.addEventListener('submit', (e) => {
       e.preventDefault();
       void this.save();
@@ -89,11 +81,6 @@ export class JobModal {
 
     document.getElementById('jobDuration')?.addEventListener('change', () => this.updateRepeatSummary());
 
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !this.modal.hidden) {
-        this.close();
-      }
-    });
   }
 
   private async browseImage(): Promise<void> {
