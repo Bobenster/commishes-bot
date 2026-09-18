@@ -17,7 +17,7 @@ const ERRORS_LOG_DIR = join(LOG_DIR, 'errors');
 electronLog.initialize({ preload: true });
 electronLog.transports.file.level = 'info';
 electronLog.transports.file.format = '[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}] {text}';
-electronLog.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
+electronLog.transports.file.maxSize = 20 * 1024 * 1024; // 20MB
 electronLog.transports.file.resolvePathFn = () => join(LOG_DIR, 'main.log');
 electronLog.transports.console.level = 'debug';
 

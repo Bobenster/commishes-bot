@@ -13,8 +13,19 @@ import { ChromeManager } from './engine/chrome-manager.js';
 import { Runner } from './engine/runner.js';
 import { WatchdogManager } from './engine/watchdog.js';
 import { logger } from './shared/logger.js';
+import {
+  appendCrashEvent,
+  setRuntimeProgress,
+  startCrashDiagnostics,
+  stopCrashDiagnostics
+} from './shared/crash-journal.js';
 import { setupAutoLaunch, setupNotifications, setupGlobalShortcuts, setupWindowEvents } from './app-features.js';
-import { armProcessGuardian, markCleanShutdown } from './process-guardian.js';
+import {
+  armProcessGuardian,
+  markCleanShutdown,
+  startProcessGuardianMonitor,
+  stopProcessGuardianMonitor
+} from './process-guardian.js';
 
 let mainWindow: BrowserWindow | null = null;
 let scheduler: Scheduler;
@@ -55,6 +66,7 @@ function createWindow() {
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
     logger.error('Renderer process gone:', details);
+    appendCrashEvent('renderer-process-gone', { details });
     setTimeout(() => {
       if (!mainWindow || mainWindow.isDestroyed()) {
         createWindow();
@@ -66,9 +78,22 @@ function createWindow() {
 
   mainWindow.webContents.on('unresponsive', () => {
     logger.warn('Renderer became unresponsive; watchdog will recover it.');
+    appendCrashEvent('renderer-unresponsive');
+  });
+
+  mainWindow.webContents.on('responsive', () => {
+    appendCrashEvent('renderer-responsive');
+  });
+
+  mainWindow.webContents.on('child-process-gone', (_event, details) => {
+    logger.error('Electron child process gone:', details);
+    appendCrashEvent('electron-child-process-gone', { details });
   });
 
   mainWindow.on('closed', () => {
+    appendCrashEvent('main-window-closed', {
+      appQuitting: Boolean((app as any).isQuitting)
+    });
     mainWindow = null;
   });
 
@@ -125,6 +150,7 @@ function initializeManagers() {
   });
 
   runner.on('progress', (progress) => {
+    setRuntimeProgress(progress);
     mainWindow?.webContents.send('job:progress', progress);
   });
 
@@ -178,7 +204,9 @@ if (!gotSingleInstanceLock) {
   });
 
   app.whenReady().then(async () => {
+    startCrashDiagnostics();
     armProcessGuardian();
+    startProcessGuardianMonitor();
     await initializeApp();
     createWindow();
     startRendererWatchdogHooks();
@@ -196,15 +224,27 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   (app as any).isQuitting = true;
-  markCleanShutdown();
+  markCleanShutdown('app.before-quit');
+  stopProcessGuardianMonitor();
   watchdog?.stop();
   scheduler.stop();
   void chromeManager.disconnect();
+  appendCrashEvent('application-shutdown-begin');
+  stopCrashDiagnostics();
   logger.info('Application shutting down');
 });
 
 // Main-process errors are captured and reported instead of silently disappearing.
+process.on('uncaughtExceptionMonitor', (error) => {
+  appendCrashEvent('uncaught-exception-monitor', {
+    error: error instanceof Error ? error.stack || error.message : String(error)
+  });
+});
+
 process.on('uncaughtException', (error) => {
+  appendCrashEvent('uncaught-exception', {
+    error: error instanceof Error ? error.stack || error.message : String(error)
+  });
   logger.error('Uncaught exception:', error);
   try {
     new Notification({
@@ -216,6 +256,9 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason) => {
+  appendCrashEvent('unhandled-rejection', {
+    reason: reason instanceof Error ? reason.stack || reason.message : String(reason)
+  });
   logger.error('Unhandled rejection:', reason);
   try {
     new Notification({
@@ -224,4 +267,14 @@ process.on('unhandledRejection', (reason) => {
       silent: false
     }).show();
   } catch {}
+});
+
+process.on('warning', (warning) => {
+  appendCrashEvent('node-warning', {
+    warning: warning instanceof Error ? warning.stack || warning.message : String(warning)
+  });
+});
+
+process.on('exit', (code) => {
+  appendCrashEvent('process-exit', { code });
 });
