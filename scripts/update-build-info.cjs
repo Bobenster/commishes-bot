@@ -21,11 +21,13 @@ function runGit(args) {
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const commit = runGit(['rev-parse', 'HEAD']);
 const shortCommit = commit.length >= 7 ? commit.slice(0, 7) : commit;
+const dirty = runGit(['status', '--porcelain']) !== '';
 
 const info = {
   version: pkg.version || '0.0.0',
   sourceCommit: commit,
   sourceShort: shortCommit,
+  sourceDirty: dirty,
   buildAtUtc: new Date().toISOString(),
   mode: 'production'
 };
