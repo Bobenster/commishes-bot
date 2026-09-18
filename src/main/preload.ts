@@ -57,6 +57,23 @@ interface Settings {
   app: any;
 }
 
+interface WatchdogServiceStatus {
+  id: string;
+  label: string;
+  state: 'healthy' | 'idle' | 'recovering' | 'warning' | 'failed';
+  message: string;
+  lastCheckedAt: string;
+  restartCount: number;
+  lastError?: string;
+}
+
+interface WatchdogStatus {
+  enabled: boolean;
+  startedAt?: string;
+  lastCheckAt?: string;
+  services: WatchdogServiceStatus[];
+}
+
 interface DryRunResult {
   success: boolean;
   auctionUrl?: string;
