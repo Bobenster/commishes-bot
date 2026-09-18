@@ -1,7 +1,7 @@
 import { AuctionDuration, AuctionParams, QueueItem, Settings, DEFAULT_SETTINGS } from '../engine/types.js';
 import { logger } from '../shared/logger.js';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export interface Migration<T> {
   version: number;
@@ -146,6 +146,17 @@ export const settingsMigrations: Migration<Settings>[] = [
         autoLaunch: settings.app?.autoLaunch ?? DEFAULT_SETTINGS.app.autoLaunch,
         minimizeToTray: settings.app?.minimizeToTray ?? DEFAULT_SETTINGS.app.minimizeToTray,
         notifications: settings.app?.notifications ?? DEFAULT_SETTINGS.app.notifications
+      }
+    })
+  },
+  {
+    version: 4,
+    up: (settings) => ({
+      ...settings,
+      engine: {
+        ...DEFAULT_SETTINGS.engine,
+        ...settings.engine,
+        testMode: false
       }
     })
   }
