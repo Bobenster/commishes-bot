@@ -311,8 +311,8 @@
           </div>
           <div class="form-row">
             <div class="form-group checkbox-group">
-              <label><input type="checkbox" id="jobNsfw"> NSFW</label>
-              <label><input type="checkbox" id="jobPreventSniping"> Prevent Sniping</label>
+              <label><input type="checkbox" id="jobNsfw" disabled> NSFW (off in reference workflow)</label>
+              <label><input type="checkbox" id="jobPreventSniping" disabled> Prevent Sniping (off in reference workflow)</label>
             </div>
           </div>
         </div>
@@ -323,13 +323,9 @@
             <div class="form-group">
               <label>Duration *</label>
               <select id="jobDuration" required>
-                <option value="1">1 Hour</option>
-                <option value="3">3 Hours</option>
-                <option value="6">6 Hours</option>
-                <option value="12">12 Hours</option>
-                <option value="24" selected>24 Hours</option>
-                <option value="48">48 Hours</option>
-                <option value="72">72 Hours</option>
+                <option value="24h" selected>24 Hours (Free)</option>
+                <option value="3d">3 Days (Free)</option>
+                <option value="7d">7 Days (Free)</option>
               </select>
             </div>
             <div class="form-group">
@@ -367,14 +363,39 @@
 
         <div class="form-section">
           <h4>Schedule</h4>
-          <div class="form-row">
-            <div class="form-group">
+          <div class="schedule-controls">
+            <div class="schedule-control">
               <label>Date *</label>
-              <input type="date" id="jobDate" required>
+              <div class="stepper">
+                <button type="button" class="btn btn-secondary btn-small step-btn" id="jobDateMinus" title="Previous day">− Day</button>
+                <input type="date" id="jobDate" required>
+                <button type="button" class="btn btn-secondary btn-small step-btn" id="jobDatePlus" title="Next day">+ Day</button>
+              </div>
             </div>
-            <div class="form-group">
+            <div class="schedule-control">
               <label>Time *</label>
-              <input type="time" id="jobTime" required>
+              <div class="stepper">
+                <button type="button" class="btn btn-secondary btn-small step-btn" id="jobTimeMinus" title="Previous hour">− Hour</button>
+                <input type="time" id="jobTime" required>
+                <button type="button" class="btn btn-secondary btn-small step-btn" id="jobTimePlus" title="Next hour">+ Hour</button>
+              </div>
+            </div>
+          </div>
+          <div class="recurrence-box">
+            <label class="recurrence-toggle">
+              <input type="checkbox" id="jobRepeat">
+              <span>Repeat this publication</span>
+            </label>
+            <div class="recurrence-options" id="jobRepeatOptions" hidden>
+              <div class="form-group">
+                <label for="jobRepeatGap">Gap after auction</label>
+                <div class="number-with-suffix">
+                  <input type="number" id="jobRepeatGap" min="0" step="1" value="1">
+                  <span>day(s)</span>
+                </div>
+                <small class="form-help">Next run = auction duration + this gap.</small>
+              </div>
+              <div class="recurrence-summary" id="jobRepeatSummary"></div>
             </div>
           </div>
         </div>
