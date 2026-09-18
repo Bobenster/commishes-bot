@@ -2,7 +2,6 @@
 
 import { app, globalShortcut, Notification, BrowserWindow, dialog } from 'electron';
 import { SettingsManager } from './data/settings-manager.js';
-import { logger } from './engine/index.js';
 
 export function setupAutoLaunch(settingsManager: SettingsManager): void {
   const handleAutoLaunchChange = (settings?: any) => {
