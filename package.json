@@ -7,6 +7,7 @@
     "dev": "electron-forge start",
     "build": "node scripts/update-build-info.cjs && electron-forge package",
     "launch": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\run.ps1",
+    "start": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\run.ps1",
     "make": "electron-forge make",
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
