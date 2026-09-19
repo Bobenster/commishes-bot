@@ -174,9 +174,21 @@ export class CommishesEngine {
     await fileInput.setInputFiles(params.imagePath);
     addStage('upload_image', true, 0, { image: params.imagePath });
 
-    // Category
+    // Commishes rebuilds part of the form asynchronously after an image upload.
+    // Wait until the category control is visible and enabled before selecting it.
     const category = page.locator(SELECTORS.create.category);
-    if (!(await category.count())) throw new Error('Category select not found');
+    await category.waitFor({ state: 'visible', timeout: 30000 });
+    await page.waitForFunction(
+      (selector) => {
+        const element = document.querySelector<HTMLSelectElement>(selector);
+        return Boolean(element && !element.disabled);
+      },
+      SELECTORS.create.category,
+      { timeout: 30000 }
+    );
+    addStage('wait_category_ready', true, 0);
+
+    // Category
     await category.selectOption(params.category);
     addStage('select_category', true, 0, { category: params.category });
 

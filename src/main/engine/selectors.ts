@@ -47,6 +47,7 @@ export const SELECTORS = {
 export const URLS = {
   create: 'https://ych.commishes.com/auction/create/',
   startPattern: /\/auction\/start\/\d+\//,
-  readyPattern: /\/auction\/ready\/\d+\//,
+  // Commishes may return /auction/ready//<id>/ in the real browser flow.
+  readyPattern: /\/auction\/ready\/+\d+\//,
   base: 'https://ych.commishes.com'
 } as const;
