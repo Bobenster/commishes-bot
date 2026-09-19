@@ -181,7 +181,7 @@ export interface HistoryFilter {
 }
 
 // Migration exports
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 export interface Migration<T> {
   version: number;
@@ -204,6 +204,21 @@ export const queueMigrations: Migration<QueueItem[]>[] = [
       ...item,
       lastRunAt: item.lastRunAt ?? undefined
     }))
+  },
+  {
+    version: 5,
+    up: (queue) => queue.map(item => {
+      // Older builds could leave jobs in "retrying" without retryAt because
+      // that field did not exist yet. Make those legacy retries immediately
+      // eligible instead of leaving them permanently stuck.
+      if (item.status === 'retrying' && !item.retryAt) {
+        return {
+          ...item,
+          retryAt: new Date().toISOString()
+        };
+      }
+      return item;
+    })
   }
 ];
 

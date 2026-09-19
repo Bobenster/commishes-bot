@@ -34,6 +34,21 @@ export class QueueManager extends EventEmitter {
     // Normalize them before any consumer (UI, scheduler, runner) sees them.
     this.queue = normalizeQueueItems(this.queue);
 
+    // Defensive repair for legacy retrying jobs whose retryAt was introduced
+    // after the job was already stored.
+    let repairedRetries = 0;
+    const now = new Date().toISOString();
+    this.queue = this.queue.map(item => {
+      if (item.status === 'retrying' && !item.retryAt) {
+        repairedRetries++;
+        return { ...item, retryAt: now, updatedAt: now };
+      }
+      return item;
+    });
+    if (repairedRetries > 0) {
+      logger.info(`Repaired ${repairedRetries} legacy retrying jobs with missing retryAt`);
+    }
+
     schemaStorage.save({ version: SCHEMA_VERSION });
     queueStorage.save(this.queue);
     this.emit('changed');
