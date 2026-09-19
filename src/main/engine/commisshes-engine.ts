@@ -150,8 +150,30 @@ export class CommishesEngine {
   }
 
   private async ensureCreatePage(page: Page): Promise<void> {
-    if (!page.url().includes('ych.commishes.com/auction/create')) {
-      await page.goto(URLS.create, { waitUntil: 'domcontentloaded' });
+    // Always load a fresh create page at the beginning of a job. Commishes
+    // protects form POSTs with a CSRF token; reusing an old create page can
+    // leave a stale/missing token after the browser session has been open for
+    // a while. Navigation keeps the same browser cookies/session.
+    await page.goto(URLS.create, { waitUntil: 'domcontentloaded' });
+
+    const csrfState = await page.locator('input[type="hidden"]').evaluateAll((inputs) =>
+      inputs
+        .map((input) => ({
+          name: (input as HTMLInputElement).name,
+          hasValue: Boolean((input as HTMLInputElement).value)
+        }))
+        .filter((item) => /csrf/i.test(item.name))
+    ).catch(() => []);
+
+    logger.info('Create page security state', {
+      url: page.url(),
+      csrfFields: csrfState
+    });
+
+    if (csrfState.length === 0) {
+      throw new Error(
+        'Commishes create form has no CSRF hidden field. The page/session may not be initialized correctly.'
+      );
     }
   }
 
@@ -222,6 +244,27 @@ export class CommishesEngine {
     const createButton = page.getByRole('button', { name: 'Create auction' });
     const createDisabled = await createButton.isDisabled();
     if (createDisabled) throw new Error('Create auction button is still disabled');
+
+    const csrfState = await page.locator('input[type="hidden"]').evaluateAll((inputs) =>
+      inputs
+        .map((input) => ({
+          name: (input as HTMLInputElement).name,
+          hasValue: Boolean((input as HTMLInputElement).value)
+        }))
+        .filter((item) => /csrf/i.test(item.name))
+    ).catch(() => []);
+
+    logger.info('Page 1 submit security state', {
+      url: page.url(),
+      csrfFields: csrfState
+    });
+
+    if (csrfState.length === 0) {
+      throw new Error(
+        'Commishes create form is missing its CSRF token immediately before Page 1 submission.'
+      );
+    }
+
     await createButton.click();
   }
 
