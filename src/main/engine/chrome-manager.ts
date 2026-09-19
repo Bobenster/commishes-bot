@@ -24,6 +24,7 @@ export class ChromeManager extends EventEmitter {
   private settings: Settings;
   private currentSession: BotChromeSession | null = null;
   private chromeProcess: ChildProcess | null = null;
+  private ensurePromise: Promise<BotChromeSession> | null = null;
 
   constructor(settingsManager: { get: () => Settings; on: (event: string, cb: () => void) => void }) {
     super();
@@ -176,7 +177,33 @@ export class ChromeManager extends EventEmitter {
 
   // Ensure BOT Chrome is running and return session
   async ensureBotChrome(): Promise<BotChromeSession> {
-    // Try to find existing
+    // Never open a second CDP connection when a usable session already exists.
+    // The renderer polls this endpoint periodically, while Runner also calls it
+    // at the beginning of a job. Reusing the same session prevents competing
+    // connectOverCDP calls and accidental page/context races.
+    if (
+      this.currentSession &&
+      this.currentSession.browser.isConnected() &&
+      !this.currentSession.page.isClosed()
+    ) {
+      return this.currentSession;
+    }
+
+    if (this.ensurePromise) {
+      return this.ensurePromise;
+    }
+
+    this.ensurePromise = this.connectOrCreateSession();
+
+    try {
+      return await this.ensurePromise;
+    } finally {
+      this.ensurePromise = null;
+    }
+  }
+
+  private async connectOrCreateSession(): Promise<BotChromeSession> {
+    // Try to find existing BOT Chrome.
     let botChrome = this.findBotChrome();
 
     if (botChrome) {
@@ -187,32 +214,41 @@ export class ChromeManager extends EventEmitter {
       logger.info('BOT Chrome started', { port: botChrome.port, pid: botChrome.pid });
     }
 
-    // Connect to that exact Chrome
     const debugInfo = await this.getDebugInfo(botChrome.port);
     if (!debugInfo) {
       throw new Error(`Could not connect to BOT Chrome on port ${botChrome.port}.`);
     }
 
-    logger.info('Connecting to BOT Chrome via CDP...');
-    const browser = await chromium.connectOverCDP(debugInfo.webSocketDebuggerUrl);
+    logger.info('Connecting to BOT Chrome via CDP...', {
+      port: botChrome.port,
+      pid: botChrome.pid
+    });
+
+    // Use a bounded timeout so a wedged CDP handshake fails quickly and can
+    // be retried by the caller instead of blocking the queue for 30+ seconds.
+    const browser = await chromium.connectOverCDP(
+      debugInfo.webSocketDebuggerUrl,
+      { timeout: 10000 }
+    );
 
     const contexts = browser.contexts();
     if (!contexts.length) {
+      await browser.close().catch(() => {});
       throw new Error('BOT Chrome has no browser context.');
     }
 
     const context = contexts[0];
     const pages = context.pages();
 
-    // Find or create Commishes tab
-    let page = pages.find(p => 
-      p.url().toLowerCase().includes('ych.commishes.com')
+    let page = pages.find(p =>
+      p.url().toLowerCase().includes('ych.commishes.com') &&
+      !p.isClosed()
     );
 
     if (!page) {
       logger.info('Commishes tab not found, creating new one...');
       page = await context.newPage();
-      await page.goto(URLS.create, { waitUntil: 'domcontentloaded' });
+      await page.goto(URLS.create, { waitUntil: 'domcontentloaded', timeout: 30000 });
     } else {
       logger.info('Found existing Commishes tab');
     }

@@ -25,6 +25,13 @@ export function setupEngineIpc(deps: EngineIpcDeps): void {
   });
 
   ipcMain.handle('engine:restartChrome', async () => {
+    if (runner.isRunning()) {
+      return {
+        success: false,
+        error: 'Chrome cannot be restarted while a job is running.'
+      };
+    }
+
     try {
       const session = await chromeManager.restart();
       return { success: true, port: session.port, pid: session.pid };
@@ -37,6 +44,13 @@ export function setupEngineIpc(deps: EngineIpcDeps): void {
   });
 
   ipcMain.handle('engine:disconnectChrome', async () => {
+    if (runner.isRunning()) {
+      return {
+        success: false,
+        error: 'Chrome cannot be disconnected while a job is running.'
+      };
+    }
+
     await chromeManager.disconnect();
     return { success: true };
   });
