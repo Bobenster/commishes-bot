@@ -26,6 +26,11 @@ export class Runner extends EventEmitter {
   private currentJob: QueueItem | null = null;
   private currentSession: BotChromeSession | null = null;
 
+  // Every automation run (scheduled or manual) is serialized here. This is a
+  // process-level queue: a second run waits instead of touching the same
+  // Chrome session/page concurrently.
+  private executionTail: Promise<void> = Promise.resolve();
+
   constructor(
     queueManager: QueueManager,
     historyManager: HistoryManager,
@@ -41,6 +46,22 @@ export class Runner extends EventEmitter {
   }
 
   async run(job: QueueItem, modeOverride?: 'dry-run' | 'publish'): Promise<RunResult> {
+    const previous = this.executionTail;
+    let release!: () => void;
+    this.executionTail = new Promise<void>(resolve => {
+      release = resolve;
+    });
+
+    await previous;
+
+    try {
+      return await this.runInternal(job, modeOverride);
+    } finally {
+      release();
+    }
+  }
+
+  private async runInternal(job: QueueItem, modeOverride?: 'dry-run' | 'publish'): Promise<RunResult> {
     this.currentJob = job;
     const jobId = job.id;
     const jobLog = createJobLogger(jobId);

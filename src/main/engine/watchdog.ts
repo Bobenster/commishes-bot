@@ -319,6 +319,13 @@ export class WatchdogManager extends EventEmitter {
   }
 
   private async checkCommishes(checkedAt: string): Promise<void> {
+    // The Runner exclusively owns the Commishes page during a job.
+    // Do not evaluate/reload the same page from the watchdog in parallel.
+    if (this.runner.isRunning()) {
+      this.setHealthy('commishes', 'Commishes page is controlled by the active Runner', checkedAt);
+      return;
+    }
+
     const session = this.chromeManager.getSession();
     if (!session) {
       this.setStatus('commishes', 'idle', 'No active browser session', checkedAt);
