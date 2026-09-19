@@ -261,6 +261,20 @@ export class WatchdogManager extends EventEmitter {
   private async checkChrome(checkedAt: string): Promise<void> {
     const session = this.chromeManager.getSession();
 
+    // During an active automation the Runner owns the browser/page. The
+    // watchdog observes only and must never evaluate, reload, or restart the
+    // same page in parallel.
+    if (this.runner.isRunning()) {
+      if (session) {
+        this.setHealthy('chrome', 'Chrome/CDP connected; controlled by active Runner', checkedAt);
+        this.setHealthy('commishes', 'Commishes page is controlled by the active Runner', checkedAt);
+      } else {
+        this.setStatus('chrome', 'warning', 'Runner is active but Chrome session is unavailable', checkedAt);
+        this.setStatus('commishes', 'warning', 'Runner is active but Commishes session is unavailable', checkedAt);
+      }
+      return;
+    }
+
     if (!session) {
       this.setStatus('chrome', 'idle', 'No active session; Chrome will be connected on demand', checkedAt);
       this.setStatus('commishes', 'idle', 'No active browser session', checkedAt);

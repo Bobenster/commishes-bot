@@ -113,10 +113,17 @@ export class QueueManager extends EventEmitter {
   }
 
   getDue(now: Date = new Date()): QueueItem[] {
-    return this.queue.filter(item =>
-      item.status === 'waiting' &&
-      new Date(item.scheduledAt) <= now
-    );
+    return this.queue.filter(item => {
+      if (item.status === 'waiting') {
+        return new Date(item.scheduledAt) <= now;
+      }
+
+      if (item.status === 'retrying') {
+        return Boolean(item.retryAt) && new Date(item.retryAt).getTime() <= now.getTime();
+      }
+
+      return false;
+    });
   }
 
   reorder(ids: string[]): void {
@@ -148,6 +155,7 @@ export class QueueManager extends EventEmitter {
     this.update(id, {
       status: 'completed',
       lastError: undefined,
+      retryAt: undefined,
       updatedAt: new Date().toISOString()
     });
   }
@@ -158,12 +166,25 @@ export class QueueManager extends EventEmitter {
 
     const newRetryCount = item.retryCount + 1;
     const willRetry = newRetryCount <= item.maxRetries;
+    const retryDelayMs = newRetryCount <= 1 ? 15_000 : 30_000;
+    const retryAt = willRetry
+      ? new Date(Date.now() + retryDelayMs).toISOString()
+      : undefined;
 
     this.update(id, {
       status: willRetry ? 'retrying' : 'failed',
       retryCount: newRetryCount,
+      retryAt,
       lastError: error,
       updatedAt: new Date().toISOString()
+    });
+
+    logger.info('Job failure handled', {
+      jobId: id,
+      retryCount: newRetryCount,
+      maxRetries: item.maxRetries,
+      willRetry,
+      retryAt
     });
   }
 
@@ -210,10 +231,11 @@ export class QueueManager extends EventEmitter {
   recoverStuckJobs(): void {
     let recovered = 0;
     for (const item of this.queue) {
-      if (item.status === 'running' || item.status === 'retrying') {
+      if (item.status === 'running') {
         this.update(item.id, {
           status: 'waiting',
           retryCount: item.retryCount + 1,
+          retryAt: undefined,
           lastError: 'Recovered after app restart'
         });
         recovered++;

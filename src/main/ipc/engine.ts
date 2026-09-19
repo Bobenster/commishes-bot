@@ -13,6 +13,14 @@ export function setupEngineIpc(deps: EngineIpcDeps): void {
   ipcMain.handle('engine:checkChrome', async () => {
     try {
       const session = await chromeManager.ensureBotChrome();
+      if (runner.isRunning()) {
+        return {
+          success: true,
+          healthy: session.browser.isConnected() && !session.page.isClosed(),
+          port: session.port,
+          pid: session.pid
+        };
+      }
       const healthy = await chromeManager.healthCheck(session);
       return { success: true, healthy, port: session.port, pid: session.pid };
     } catch (error) {

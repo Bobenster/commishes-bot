@@ -47,6 +47,7 @@ export interface QueueItem {
   recurrence?: RecurrenceSettings;
   lastError?: string;
   lastRunAt?: string;
+  retryAt?: string;
 }
 
 export type JobStatus = 

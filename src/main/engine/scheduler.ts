@@ -78,16 +78,11 @@ export class Scheduler extends EventEmitter {
     const settings = this.settingsManager.get();
     const cooldownMs = settings.scheduler.cooldownMs || 60000;
 
-    // Check cooldown
-    if (this.lastRunAt && (Date.now() - this.lastRunAt.getTime()) < cooldownMs) {
-      return;
-    }
-
     this.lastTickAt = new Date();
     this.nextTickAt = new Date(Date.now() + this.intervalMs);
 
     const dueJobs = this.queueManager.getDue(this.lastTickAt);
-    
+
     if (dueJobs.length === 0) {
       this.emit('tick', this.getStatus());
       return;
@@ -97,8 +92,19 @@ export class Scheduler extends EventEmitter {
     this.emit('tick', this.getStatus());
 
     try {
-      for (const job of dueJobs) {
-        logger.info(`Processing job ${job.id}: ${job.params.title}`);
+      for (const job of dueJobs.sort((a, b) => {
+        const aRetry = a.status === 'retrying' ? 0 : 1;
+        const bRetry = b.status === 'retrying' ? 0 : 1;
+        return aRetry - bRetry || new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime();
+      })) {
+        if (job.status === 'waiting' && this.lastRunAt && (Date.now() - this.lastRunAt.getTime()) < cooldownMs) {
+          continue;
+        }
+
+        logger.info('Processing job ' + job.id + ': ' + job.params.title, {
+          status: job.status,
+          retryAt: job.retryAt
+        });
         
         const result = await this.runner.run(job);
         
